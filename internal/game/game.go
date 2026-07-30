@@ -3,11 +3,11 @@ package game
 import "math/rand/v2"
 
 type Game struct {
-	deck []Card
+	deck    []Card
 	players []Player
-	
+
 	Trump Card
-	Turn Turn
+	Turn  *Turn
 }
 
 // Generates a full deck of cards
@@ -24,18 +24,17 @@ func CreateDeck() []Card {
 
 // Shuffles a deck (in-place)
 func (g *Game) ShuffleDeck() {
-	rand.Shuffle(len(g.deck), func (i, j int) {
+	rand.Shuffle(len(g.deck), func(i, j int) {
 		g.deck[i], g.deck[j] = g.deck[j], g.deck[i]
 	})
 }
 
-// Deals the cards to the Players in the game, removes those cards from the deck
+// Deals cards to the Players in the game, removes those cards from the deck
 func (g *Game) DealCards() {
 	for i := range g.players {
 		g.players[i].hand = g.deck[:6] // TODO: Fix magic number : 6
 		g.deck = g.deck[6:]
 	}
-
 }
 
 // Creates and shuffles the deck, deals cards and picks the Trump card
