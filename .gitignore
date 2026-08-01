@@ -1,0 +1,4 @@
+node_modules
+package.json
+eslint.config.mjs
+pnpm-lock.yaml
