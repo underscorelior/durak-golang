@@ -1,15 +1,16 @@
 package game
 
 type Turn struct {
-	TableState  []CardPair
-	DefenderID   uint8
-	InitialAttackerID uint8
-	
-	AttackerIDs   map[uint8]struct{} // Figure out how to do this, i doubt this is a good pattern
+	TableState        []CardPair
+	DefenderID        string // Is this the best pattern?
+	InitialAttackerID string
+
+	AttackerIDs map[string]struct{} // Figure out how to do this, i doubt this is a good pattern
 	Phase       TurnPhase
 }
 
-type TurnPhase uint8 
+type TurnPhase uint8
+
 const (
 	INITIAL = iota
 	ATTACK

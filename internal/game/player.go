@@ -1,8 +1,8 @@
 package game
 
 type Player struct {
-	ID       uint8
-	Position uint8
+	ID       string
+	Position uint8 // Need a different pattern
 
 	hand []Card
 }

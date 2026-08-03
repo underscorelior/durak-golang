@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -19,36 +20,36 @@ var (
 
 type ClientList map[*Client]bool
 
+// Pattern is:
+//   - Client has name and ID of user
+//     -
 type Client struct {
-	Name string
-	ID   uint8
+	Name    string
+	ID      string
+	LobbyID *string
 	// Provide TableState/Trump/DeckSize without exposing Deck of other Players
 	gameState *game.ClientGameState
 
 	connection *websocket.Conn
 	lobby      *Lobby
 
+	manager *Manager
+
 	egress chan Event
 }
 
-func (l *Lobby) NextID() uint8 {
-	oldID := l.CurrentID
-	l.CurrentID += 1
-	return oldID
-}
-
-func NewClient(conn *websocket.Conn, lobby *Lobby, name string) *Client {
+func NewClient(conn *websocket.Conn, manager *Manager, name string) *Client {
 	return &Client{
 		Name:       name,
-		ID:         lobby.NextID(),
+		ID:         uuid.NewString(),
 		connection: conn,
-		lobby:      lobby,
+		manager:    manager,
 	}
 }
 
 func (c *Client) readMessages() {
 	defer func() {
-		c.lobby.removeClient(c)
+		c.manager.removeClient(c)
 	}()
 
 	if err := c.connection.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
@@ -77,7 +78,7 @@ func (c *Client) readMessages() {
 			break
 		}
 
-		if err := c.lobby.routeEvent(request, c); err != nil {
+		if err := c.manager.routeEvent(request, c); err != nil {
 			log.Println("Error handling message: ", err)
 		}
 	}
@@ -85,7 +86,7 @@ func (c *Client) readMessages() {
 
 func (c *Client) writeMessages() {
 	defer func() {
-		c.lobby.removeClient(c)
+		c.manager.removeClient(c)
 	}()
 
 	ticker := time.NewTicker(pingInterval)
