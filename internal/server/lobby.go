@@ -54,6 +54,8 @@ func (l *Lobby) routeEvent(event Event, c *Client) error {
 
 func (l *Lobby) ServeWS(w http.ResponseWriter, r *http.Request) {
 	log.Println("New connection")
+	// name := r.URL.Query().Get("username")
+	name := "temp"
 
 	conn, err := websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -61,7 +63,7 @@ func (l *Lobby) ServeWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := NewClient(conn, l)
+	client := NewClient(conn, l, name)
 
 	l.addClient(client)
 

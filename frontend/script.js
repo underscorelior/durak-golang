@@ -20,8 +20,14 @@ class WSEvent {
  */
 
 class JoinLobbyEvent {
-    constructor(players) {
-        self.players = players
+    constructor(name) {
+        this.name = name
+    }
+}
+
+class LobbyJoinedEvent {
+    constructor(state) {
+        this.state = state
     }
 }
 
@@ -53,6 +59,9 @@ function routeEvent(event) {
             // joinLobby(joinEvent)
             break;
         }
+        case 'lobby_joined': {
+            break;
+        }
         case 'leave_lobby': {
             // const leaveEvent = new LeaveLobbyEvent(...event.payload)
             // leaveLobby(leaveEvent)
@@ -71,14 +80,12 @@ function routeEvent(event) {
 }
 
 function sendEvent(eventName, payload) {
-    const event = new Event(eventName, payload);
+    const event = new WSEvent(eventName, payload);
 
     conn.send(JSON.stringify(event));
 }
 
-
-
-window.onload = function () {
+function connectWebsocket(name) {
     if (window['WebSocket']) {
         console.log('supports websocksets');
 
@@ -86,15 +93,61 @@ window.onload = function () {
             'ws://' + document.location.host + '/ws',
         );
 
+        conn.onopen = function () {
+            document.getElementById('connection-status').innerHTML =
+                'True';
+            const joinEvent = new JoinLobbyEvent(name)
+            sendEvent('join_lobby', joinEvent)
+        };
+        conn.onclose = function () {
+            document.getElementById('connection-status').innerHTML =
+                'False';
+            // add some sort of reconnection/jitter protection
+        };
+
         conn.onmessage = function (e) {
             const eventData = JSON.parse(e.data);
 
-            const event = new WSEvent(eventData.type, eventData.payload);
-
+            const event = WSEvent(...eventData);
             routeEvent(event);
         };
     } else {
         alert('Browser doesnt support websockets');
     }
-};
+}
 
+
+function joinLobby() {
+    let name = document.getElementById('username').value
+
+    connectWebsocket(name)
+
+    // fetch('login', {
+    //     method: 'POST',
+    //     body: JSON.stringify(formData),
+    // })
+    //     .then((response) => {
+    //         if (response.ok) {
+    //             return response.json();
+    //         } else {
+    //             throw `unauthorized`;
+    //         }
+    //     })
+    //     .then((data) => {
+    //         connectWebsocket(data.otp);
+    //     })
+    //     .catch((e) => {
+    //         alert(e);
+    //     });
+
+    // const joinEvent = new JoinLobbyEvent(name)
+    // console.log("test")
+    // sendEvent('join_lobby', joinEvent)
+
+    return false;
+}
+
+
+window.onload = function () {
+    document.getElementById('join-lobby').onclick = joinLobby
+};

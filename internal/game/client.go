@@ -1,8 +1,4 @@
-package client
-
-import (
-	"durak/internal/game"
-)
+package game
 
 // This describes the visible state of an opponent player to a client
 type ClientPlayer struct {
@@ -15,10 +11,10 @@ type ClientPlayer struct {
 
 type ClientGameState struct {
 	Players []ClientPlayer
-	hand    []game.Card
+	hand    []Card
 
-	Trump    game.Card
+	Trump    Card
 	DeckSize uint8
 
-	Turn game.Turn
+	Turn Turn
 }

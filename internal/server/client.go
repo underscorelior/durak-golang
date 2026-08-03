@@ -2,8 +2,9 @@
 package server
 
 import (
-	"durak/internal/client"
+	"durak/internal/game"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -22,7 +23,7 @@ type Client struct {
 	Name string
 	ID   uint8
 	// Provide TableState/Trump/DeckSize without exposing Deck of other Players
-	gameState *client.ClientGameState
+	gameState *game.ClientGameState
 
 	connection *websocket.Conn
 	lobby      *Lobby
@@ -36,8 +37,7 @@ func (l *Lobby) NextID() uint8 {
 	return oldID
 }
 
-func NewClient(conn *websocket.Conn, lobby *Lobby) *Client {
-	name := "pass in"
+func NewClient(conn *websocket.Conn, lobby *Lobby, name string) *Client {
 	return &Client{
 		Name:       name,
 		ID:         lobby.NextID(),
@@ -116,11 +116,13 @@ func (c *Client) writeMessages() {
 				log.Println("Error in sending ping: ", err)
 				return
 			}
+			fmt.Println(c.Name, "- Ping")
 		}
 
 	}
 }
 
 func (c *Client) pongHandler(pongMsg string) error {
+	fmt.Println(c.Name, "- Pong")
 	return c.connection.SetReadDeadline(time.Now().Add(pongWait))
 }
