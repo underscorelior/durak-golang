@@ -1,12 +1,14 @@
 package game
 
-type Suit uint8 
+type Suit uint8
+
 const (
 	Club Suit = iota
 	Diamond
 	Heart
 	Spade
 )
+
 var Suits = [4]Suit{
 	Club,
 	Diamond,
@@ -15,6 +17,7 @@ var Suits = [4]Suit{
 }
 
 type Rank uint8
+
 const (
 	Six = iota + 6
 	Seven
@@ -26,6 +29,7 @@ const (
 	King
 	Ace
 )
+
 var Ranks = [9]Rank{
 	Six,
 	Seven,
@@ -38,14 +42,13 @@ var Ranks = [9]Rank{
 	Ace,
 }
 
-
-type Card struct { // Could potentially optimize to be uint8 for the whole thing, first 3 bytes = Suit, last 5 = Rank, bitwise operations
+type Card struct {
 	Suit Suit
 	Rank Rank
 }
 
 type CardPair struct {
 	AttackCard  Card
-	DefenseCard *Card // Nullable
+	DefenseCard *Card
 	IsDefended  bool
 }

@@ -17,7 +17,7 @@ func (t *Turn) CanPlace(player Player, card Card) bool {
 		return true
 	}
 
-	rankSet := make(map[Rank]struct{})
+	rankSet := make(map[Rank]struct{}) // Should this be bool isntead of struct{}?
 	for _, pairs := range t.TableState {
 		rankSet[pairs.AttackCard.Rank] = struct{}{}
 		rankSet[pairs.DefenseCard.Rank] = struct{}{}
