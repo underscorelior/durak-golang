@@ -9,6 +9,8 @@
 	<body>
 		<h1></h1>
 		<h3>Connection Status: <span id="connection-status">False</span></h3>
+		<h4>Current Lobby: <span id="current-lobby">Disconnected</span></h4>
+		<h4>Username: <span id="current-name">N/A</span></h4>
 
 		<p>Hand: <span id="hand"></span></p>
 
@@ -17,6 +19,14 @@
 			name="username"
 			id="username"
 			placeholder="Type in a username"
+		/>
+		<button type="submit" id="set-name">Set Username</button>
+
+		<input
+			type="text"
+			name="lobby_id"
+			id="lobby_id"
+			placeholder="Type in a lobby ID"
 		/>
 		<button type="submit" id="join-lobby">Join</button>
 	</body>

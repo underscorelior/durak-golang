@@ -1,9 +1,12 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
+	"maps"
 	"net/http"
+	"slices"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -21,7 +24,7 @@ type Manager struct {
 	clients ClientList
 	sync.RWMutex
 
-	lobbies map[string]Lobby // string here is the identifier of a lobby
+	lobbies LobbyList
 
 	handlers map[string]EventHandler
 }
@@ -38,7 +41,7 @@ func NewManager() *Manager {
 }
 
 func (m *Manager) setupEventHandlers() {
-	// l.handlers[EventJoinLobby] = ClientJoinLobby (?)
+	m.handlers[EventUpdateUser] = UpdateUser
 }
 
 func (m *Manager) routeEvent(event Event, c *Client) error {
@@ -54,12 +57,11 @@ func (m *Manager) routeEvent(event Event, c *Client) error {
 
 func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 	log.Println("New connection")
-	// name := r.URL.Query().Get("username")
-	name := "temp"
+	name := r.URL.Query().Get("username")
 
 	conn, err := websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error in upgrading http connection to websocket: %v\n", err)
 		return
 	}
 
@@ -69,6 +71,24 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 
 	go client.readMessages()
 	go client.writeMessages()
+
+	var connEstMsg ConnectionEstablishedEvent
+
+	connEstMsg.Name = name
+	connEstMsg.Lobbies = slices.Collect(maps.Keys(m.lobbies))
+
+	data, err := json.Marshal(connEstMsg)
+	if err != nil {
+		log.Printf("Failed to marshal connection established message: %v\n", err)
+		return
+	}
+
+	connectionEstablished := Event{
+		Payload: data,
+		Type:    EventConnectionEstablished,
+	}
+
+	client.egress <- connectionEstablished
 }
 
 func (m *Manager) addClient(client *Client) {
@@ -84,6 +104,7 @@ func (m *Manager) removeClient(client *Client) {
 
 	if _, ok := m.clients[client]; ok {
 		client.connection.Close()
+		delete(m.clients, client)
 	}
 }
 

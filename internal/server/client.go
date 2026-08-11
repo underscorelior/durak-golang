@@ -1,4 +1,3 @@
-// TODO: FIND A BETTER PATTERN FOR CLIENT/SERVER
 package server
 
 import (
@@ -20,20 +19,17 @@ var (
 
 type ClientList map[*Client]bool
 
-// Pattern is:
-//   - Client has name and ID of user
-//     -
 type Client struct {
 	Name    string
-	ID      string
+	UserID  string
 	LobbyID *string
-	// Provide TableState/Trump/DeckSize without exposing Deck of other Players
+
 	gameState *game.ClientGameState
 
-	connection *websocket.Conn
-	lobby      *Lobby
+	lobby *Lobby
 
-	manager *Manager
+	connection *websocket.Conn
+	manager    *Manager
 
 	egress chan Event
 }
@@ -41,9 +37,10 @@ type Client struct {
 func NewClient(conn *websocket.Conn, manager *Manager, name string) *Client {
 	return &Client{
 		Name:       name,
-		ID:         uuid.NewString(),
+		UserID:     uuid.NewString(),
 		connection: conn,
 		manager:    manager,
+		egress:     make(chan Event),
 	}
 }
 

@@ -7,21 +7,27 @@ class WSEvent {
     }
 }
 
-/** Lobby Events:
- * CreateLobby
-   * 
- * JoinLobby
-   * url
-   * players
- * LobbyUpdate (player joins, etc.)
-   * Subroute (player update (?))
-   * Way to differentiate between add and remove (Join and Leave lobby broadcass this)
- * LeaveLobby
- */
-
-class JoinLobbyEvent {
+class ConnectionEstablishedEvent {
     constructor(name) {
         this.name = name
+    }
+}
+
+class UpdateUserEvent {
+    constructor(name) {
+        this.name = name
+    }
+}
+
+class UserUpdatedEvent {
+    constructor(name) {
+        this.name = name
+    }
+}
+
+class JoinLobbyEvent {
+    constructor(lobbyID) {
+        this.lobbyID = lobbyID
     }
 }
 
@@ -37,9 +43,11 @@ class LeaveLobbyEvent {
     }
 }
 
-class UpdateLobbyEvent {
-    constructor() {
-
+class LobbyUpdatedEvent {
+    constructor(delta_name, delta_operation, delta_payload) {
+        self.delta_name = delta_name
+        self.delta_operation = delta_operation
+        self.delta_payload = delta_payload
     }
 }
 
@@ -54,12 +62,27 @@ function routeEvent(event) {
     }
 
     switch (event.type) {
+        case 'connection_established': {
+            const connectionEstablishedEvent = new ConnectionEstablishedEvent(event.payload.name)
+            connectionEstablishedHandler(connectionEstablishedEvent)
+            break;
+        }
+        case 'update_user': {
+            break;
+        }
+        case 'user_updated': {
+            const userUpdatedEvent = new UserUpdatedEvent(event.payload.name) // find a better pattern
+            userUpdatedHandler(userUpdatedEvent)
+            break;
+        }
         case 'join_lobby': {
             // const joinEvent = new JoinLobbyEvent(...event.payload)
             // joinLobby(joinEvent)
             break;
         }
         case 'lobby_joined': {
+            const lobbyJoinedEvent = new LobbyJoinedEvent(...event.payload)
+            lobbyJoinedHandler(lobbyJoinedEvent)
             break;
         }
         case 'leave_lobby': {
@@ -67,8 +90,8 @@ function routeEvent(event) {
             // leaveLobby(leaveEvent)
             break;
         }
-        case 'update_lobby': {
-            // const updateEvent = new UpdateLobbyEvent(...event.payload)
+        case 'lobby_updated': {
+            // const updateEvent = new LobbyUpdatedEvent(...event.payload)
             // joinLobby(joinEvent)
             break;
         }
@@ -85,30 +108,31 @@ function sendEvent(eventName, payload) {
     conn.send(JSON.stringify(event));
 }
 
-function connectWebsocket(name) {
+function connectWebsocket() {
     if (window['WebSocket']) {
         console.log('supports websocksets');
 
         conn = new WebSocket(
-            'ws://' + document.location.host + '/ws',
+            'ws://' + document.location.host + '/ws?username=default',
         );
 
         conn.onopen = function () {
             document.getElementById('connection-status').innerHTML =
                 'True';
-            const joinEvent = new JoinLobbyEvent(name)
-            sendEvent('join_lobby', joinEvent)
+            document.getElementById('current-lobby').innerHTML = 'Not Connected'
         };
         conn.onclose = function () {
             document.getElementById('connection-status').innerHTML =
                 'False';
+            document.getElementById('current-lobby').innerHTML = 'Disconnected'
+            document.getElementById('current-name').innerHTML = 'N/A'
             // add some sort of reconnection/jitter protection
         };
 
         conn.onmessage = function (e) {
             const eventData = JSON.parse(e.data);
 
-            const event = WSEvent(...eventData);
+            const event = new WSEvent(eventData.type, eventData.payload);
             routeEvent(event);
         };
     } else {
@@ -116,11 +140,32 @@ function connectWebsocket(name) {
     }
 }
 
+function connectionEstablishedHandler(updatedEvent) {
+    console.log(updatedEvent)
+    document.getElementById('current-name').innerHTML = updatedEvent.name;
+}
 
-function joinLobby() {
+function updateUser() {
     let name = document.getElementById('username').value
 
-    connectWebsocket(name)
+    const updateEvent = new UpdateUserEvent(name)
+    sendEvent('update_user', updateEvent)
+
+    return false;
+}
+
+function userUpdatedHandler(updatedEvent) {
+    console.log(updatedEvent)
+    document.getElementById('current-name').innerHTML = updatedEvent.name;
+}
+
+
+function joinLobby() {
+    let lobbyID = document.getElementById('lobby-id').value
+
+    const joinEvent = new JoinLobbyEvent(lobbyID)
+    sendEvent('join_lobby', joinEvent)
+
 
     // fetch('login', {
     //     method: 'POST',
@@ -140,14 +185,16 @@ function joinLobby() {
     //         alert(e);
     //     });
 
-    // const joinEvent = new JoinLobbyEvent(name)
-    // console.log("test")
-    // sendEvent('join_lobby', joinEvent)
-
     return false;
+}
+
+function lobbyJoinedHandler(event) {
+
 }
 
 
 window.onload = function () {
     document.getElementById('join-lobby').onclick = joinLobby
+    document.getElementById('set-name').onclick = updateUser
+    connectWebsocket()
 };
