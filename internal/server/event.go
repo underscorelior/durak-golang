@@ -15,11 +15,14 @@ type EventHandler func(event Event, c *Client) error
 const (
 	EventConnectionEstablished = "connection_established"
 	EventUpdateUser            = "update_user"
-	EventUserUpdated           = "user_updated" // "Handshake" for updating event ??? Is this best practices?
+	EventUserUpdated           = "user_updated"
+	EventCreateLobby           = "create_lobby"
+	EventLobbyCreated          = "lobby_created"
 	EventJoinLobby             = "join_lobby"
+	EventJoinLobbyFailed       = "join_lobby_failed"
 	EventLobbyJoined           = "lobby_joined"
 	EventLeaveLobby            = "leave_lobby"
-	EventLobbyUpdate           = "lobby_updated" // Broadcasting a lobby update
+	EventLobbyUpdate           = "lobby_updated"
 )
 
 type ConnectionEstablishedEvent struct {
@@ -35,14 +38,28 @@ type UserUpdatedEvent struct {
 	Name string `json:"name"`
 }
 
+type CreateLobbyEvent struct {
+}
+
+type LobbyCreatedEvent struct {
+	LobbyID string `json:"lobbyId"`
+}
+
 // Sent by a client to the server to indicate joining.
 type JoinLobbyEvent struct {
-	Name string `json:"name"`
+	LobbyID string `json:"lobbyId"`
+}
+
+type JoinLobbyFailedEvent struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	LobbyID string `json:"lobbyId"`
 }
 
 // Sent by server to recently joined client
 type LobbyJoinedEvent struct {
-	State game.ClientGameState
+	LobbyID string               `json:"lobbyId"`
+	State   game.ClientGameState `json:"game_state"`
 }
 
 type LeaveLobbyEvent struct {

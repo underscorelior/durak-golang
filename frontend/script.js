@@ -25,9 +25,30 @@ class UserUpdatedEvent {
     }
 }
 
+class CreateLobbyEvent {
+    constructor() {
+
+    }
+}
+
+class LobbyCreatedEvent {
+    constructor(lobbyId) {
+        this.lobbyId = lobbyId
+    }
+}
+
 class JoinLobbyEvent {
-    constructor(lobbyID) {
-        this.lobbyID = lobbyID
+    constructor(lobbyId) {
+        this.lobbyId = lobbyId
+    }
+}
+
+// TODO: In order to avoid passing in lobbyID, maybe a system where I can reference a past request and grab it from there?
+class JoinLobbyFailedEvent {
+    constructor({ code, message, lobbyId }) {
+        this.code = code
+        this.message = message
+        this.lobbyId = lobbyId
     }
 }
 
@@ -67,27 +88,26 @@ function routeEvent(event) {
             connectionEstablishedHandler(connectionEstablishedEvent)
             break;
         }
-        case 'update_user': {
-            break;
-        }
         case 'user_updated': {
             const userUpdatedEvent = new UserUpdatedEvent(event.payload.name) // find a better pattern
             userUpdatedHandler(userUpdatedEvent)
             break;
         }
-        case 'join_lobby': {
-            // const joinEvent = new JoinLobbyEvent(...event.payload)
-            // joinLobby(joinEvent)
+        case 'lobby_created': {
+            const lobbyCreatedEvent = new LobbyCreatedEvent(event.payload.lobbyId)
+            lobbyCreatedHandler(lobbyCreatedEvent)
+            break;
+        }
+        case 'join_lobby_failed': {
+            console.log(event.payload)
+            const joinLobbyFailedEvent = new JoinLobbyFailedEvent(event.payload)
+            joinLobbyFailedHandler(joinLobbyFailedEvent)
             break;
         }
         case 'lobby_joined': {
-            const lobbyJoinedEvent = new LobbyJoinedEvent(...event.payload)
+            console.log(event.payload)
+            const lobbyJoinedEvent = new LobbyJoinedEvent(event.payload)
             lobbyJoinedHandler(lobbyJoinedEvent)
-            break;
-        }
-        case 'leave_lobby': {
-            // const leaveEvent = new LeaveLobbyEvent(...event.payload)
-            // leaveLobby(leaveEvent)
             break;
         }
         case 'lobby_updated': {
@@ -141,7 +161,6 @@ function connectWebsocket() {
 }
 
 function connectionEstablishedHandler(updatedEvent) {
-    console.log(updatedEvent)
     document.getElementById('current-name').innerHTML = updatedEvent.name;
 }
 
@@ -155,46 +174,42 @@ function updateUser() {
 }
 
 function userUpdatedHandler(updatedEvent) {
-    console.log(updatedEvent)
     document.getElementById('current-name').innerHTML = updatedEvent.name;
 }
 
-
-function joinLobby() {
-    let lobbyID = document.getElementById('lobby-id').value
-
-    const joinEvent = new JoinLobbyEvent(lobbyID)
-    sendEvent('join_lobby', joinEvent)
-
-
-    // fetch('login', {
-    //     method: 'POST',
-    //     body: JSON.stringify(formData),
-    // })
-    //     .then((response) => {
-    //         if (response.ok) {
-    //             return response.json();
-    //         } else {
-    //             throw `unauthorized`;
-    //         }
-    //     })
-    //     .then((data) => {
-    //         connectWebsocket(data.otp);
-    //     })
-    //     .catch((e) => {
-    //         alert(e);
-    //     });
+function createLobby() {
+    const createEvent = new CreateLobbyEvent()
+    sendEvent('create_lobby', createEvent)
 
     return false;
 }
 
-function lobbyJoinedHandler(event) {
+function lobbyCreatedHandler(event) {
+    joinLobby(event.lobbyId)
+}
 
+
+function joinLobby(lobbyId = null) {
+    let lobbyID = lobbyId ?? document.getElementById('lobby-id').value
+
+    const joinEvent = new JoinLobbyEvent(lobbyID)
+    sendEvent('join_lobby', joinEvent)
+
+    return false;
+}
+
+function joinLobbyFailedHandler(event) {
+    console.log(event)
+    alert(`${event.code}: ${event.message} (${event.lobbyId})`)
+}
+
+function lobbyJoinedHandler(event) {
 }
 
 
 window.onload = function () {
-    document.getElementById('join-lobby').onclick = joinLobby
+    document.getElementById('join-lobby').addEventListener("click", () => joinLobby())
     document.getElementById('set-name').onclick = updateUser
+    document.getElementById('create-lobby').onclick = createLobby
     connectWebsocket()
 };

@@ -8,7 +8,7 @@ import (
 func UpdateUser(event Event, c *Client) error {
 	var updateUserEvent UpdateUserEvent
 	if err := json.Unmarshal(event.Payload, &updateUserEvent); err != nil {
-		return fmt.Errorf("bad payload in request: %v", err)
+		return fmt.Errorf("Bad payload in request: %v", err)
 	}
 
 	c.Name = updateUserEvent.Name
@@ -19,7 +19,7 @@ func UpdateUser(event Event, c *Client) error {
 
 	data, err := json.Marshal(userUpdatedMsg)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal connection established message: %v\n", err)
+		return fmt.Errorf("Failed to marshal UserUpdated message: %v", err)
 	}
 
 	userUpdated := Event{
@@ -28,6 +28,84 @@ func UpdateUser(event Event, c *Client) error {
 	}
 
 	c.egress <- userUpdated
+
+	return nil
+}
+
+func CreateLobby(event Event, c *Client) error {
+	var createLobbyEvent CreateLobbyEvent
+	if err := json.Unmarshal(event.Payload, &createLobbyEvent); err != nil {
+		return fmt.Errorf("Bad payload in request: %v", err)
+	}
+
+	// TODO: Need to implement ratelimit system
+	lobby := c.manager.NewLobby()
+	c.manager.addLobby(lobby)
+
+	var lobbyCreatedMsg LobbyCreatedEvent
+
+	lobbyCreatedMsg.LobbyID = lobby.LobbyID
+
+	data, err := json.Marshal(lobbyCreatedMsg)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal LobbyCreated message: %v", err)
+	}
+
+	lobbyCreated := Event{
+		Payload: data,
+		Type:    EventLobbyCreated,
+	}
+
+	c.egress <- lobbyCreated
+
+	return nil
+}
+
+func JoinLobby(event Event, c *Client) error {
+	var joinLobbyEvent JoinLobbyEvent
+	if err := json.Unmarshal(event.Payload, &joinLobbyEvent); err != nil {
+		return fmt.Errorf("Bad payload in request: %v", err)
+	}
+
+	lobby, ok := c.manager.lobbies[joinLobbyEvent.LobbyID]
+
+	if !ok {
+		var joinLobbyFailedMsg JoinLobbyFailedEvent
+
+		joinLobbyFailedMsg.Code = "lobby_not_found"
+		joinLobbyFailedMsg.Message = "Lobby does not exist"
+		joinLobbyFailedMsg.LobbyID = joinLobbyEvent.LobbyID
+
+		data, err := json.Marshal(joinLobbyFailedMsg)
+		if err != nil {
+			return fmt.Errorf("Failed to marshal JoinLobbyFailed message: %v", err)
+		}
+
+		joinLobbyFailed := Event{
+			Payload: data,
+			Type:    EventJoinLobbyFailed,
+		}
+
+		c.egress <- joinLobbyFailed
+
+		return nil // I dont think this should be nil
+	}
+
+	c.lobby = lobby
+
+	var lobbyJoinedMsg LobbyJoinedEvent
+
+	data, err := json.Marshal(lobbyJoinedMsg)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal lobby joined message: %v", err)
+	}
+
+	lobbyJoined := Event{
+		Payload: data,
+		Type:    EventLobbyJoined,
+	}
+
+	c.egress <- lobbyJoined
 
 	return nil
 }

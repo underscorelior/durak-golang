@@ -32,6 +32,7 @@ type Manager struct {
 func NewManager() *Manager {
 	m := &Manager{
 		clients:  make(ClientList),
+		lobbies:  make(LobbyList),
 		handlers: make(map[string]EventHandler),
 	}
 
@@ -42,6 +43,8 @@ func NewManager() *Manager {
 
 func (m *Manager) setupEventHandlers() {
 	m.handlers[EventUpdateUser] = UpdateUser
+	m.handlers[EventCreateLobby] = CreateLobby
+	m.handlers[EventJoinLobby] = JoinLobby
 }
 
 func (m *Manager) routeEvent(event Event, c *Client) error {
@@ -61,7 +64,7 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("Error in upgrading http connection to websocket: %v\n", err)
+		log.Printf("Error in upgrading http connection to websocket: %v", err)
 		return
 	}
 
@@ -79,7 +82,7 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 
 	data, err := json.Marshal(connEstMsg)
 	if err != nil {
-		log.Printf("Failed to marshal connection established message: %v\n", err)
+		log.Printf("Failed to marshal ConnectionEstablished message: %v", err)
 		return
 	}
 

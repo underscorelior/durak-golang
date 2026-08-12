@@ -1,6 +1,10 @@
 package server
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/google/uuid"
+)
 
 type LobbyList map[string]*Lobby
 type Lobby struct {
@@ -11,10 +15,10 @@ type Lobby struct {
 	manager *Manager
 }
 
-func (m *Manager) NewLobby(lobbyID string) *Lobby {
+func (m *Manager) NewLobby() *Lobby {
 	l := &Lobby{
 		clients: make(ClientList),
-		LobbyID: lobbyID,
+		LobbyID: uuid.NewString(),
 		manager: m,
 	}
 
