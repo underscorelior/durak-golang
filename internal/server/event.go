@@ -20,8 +20,9 @@ const (
 	EventJoinLobby             = "join_lobby"
 	EventJoinLobbyFailed       = "join_lobby_failed"
 	EventLobbyJoined           = "lobby_joined"
+	EventPlayerJoined          = "player_joined"
 	EventLeaveLobby            = "leave_lobby"
-	EventLobbyUpdate           = "lobby_updated"
+	EventPlayerLeft            = "player_left"
 )
 
 type ConnectionEstablishedEvent struct {
@@ -35,9 +36,6 @@ type UpdateUserEvent struct {
 
 type UserUpdatedEvent struct {
 	Name string `json:"name"`
-}
-
-type CreateLobbyEvent struct {
 }
 
 type LobbyCreatedEvent struct {
@@ -60,14 +58,6 @@ type LobbyJoinedEvent struct {
 	Lobby LobbySnapshot `json:"lobby"`
 }
 
-type LeaveLobbyEvent struct {
-}
-
-// Sent out by server to all clients for stuff like when a user joins
-//
-// Ex: {'d_name':'player','d_op':'add','d_payload':{newplayer}}
-type LobbyUpdatedEvent struct {
-	Name      string `json:"delta_name"`
-	Operation string `json:"delta_operation"` // Add, Remove, etc.
-	Payload   any    `json:"delta_payload"`   // Replace ANY
+type PlayerJoinedEvent struct {
+	Player LobbyPlayer `json:"player"`
 }

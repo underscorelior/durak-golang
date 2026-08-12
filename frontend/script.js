@@ -1,5 +1,15 @@
 let conn;
 
+class GameState {
+    constructor() {
+        this.name = "default"
+        this.lobbyId = ""
+        this.players = []
+    }
+}
+
+let state = new GameState()
+
 class WSEvent {
     constructor(type, payload) {
         this.type = type;
@@ -58,24 +68,12 @@ class LobbyJoinedEvent {
     }
 }
 
-class LeaveLobbyEvent {
-    constructor() {
-
+class PlayerJoinedEvent {
+    constructor(player) {
+        this.player = player
     }
 }
 
-class LobbyUpdatedEvent {
-    constructor(delta_name, delta_operation, delta_payload) {
-        self.delta_name = delta_name
-        self.delta_operation = delta_operation
-        self.delta_payload = delta_payload
-    }
-}
-
-/** Game Events:
- * GameStart
-   * game object
- */
 
 function routeEvent(event) {
     if (event.type === undefined) {
@@ -108,9 +106,9 @@ function routeEvent(event) {
             lobbyJoinedHandler(lobbyJoinedEvent)
             break;
         }
-        case 'lobby_updated': {
-            // const updateEvent = new LobbyUpdatedEvent(...event.payload)
-            // joinLobby(joinEvent)
+        case 'player_joined': {
+            const playerJoinedEvent = new PlayerJoinedEvent(event.payload.player)
+            playerJoinedHandler(playerJoinedEvent)
             break;
         }
         default: {
@@ -159,7 +157,8 @@ function connectWebsocket() {
 }
 
 function connectionEstablishedHandler(updatedEvent) {
-    document.getElementById('current-name').innerHTML = updatedEvent.name;
+    state.name = updatedEvent.name
+    document.getElementById('current-name').innerHTML = state.name;
 }
 
 function updateUser() {
@@ -172,7 +171,8 @@ function updateUser() {
 }
 
 function userUpdatedHandler(updatedEvent) {
-    document.getElementById('current-name').innerHTML = updatedEvent.name;
+    state.name = updatedEvent.name
+    document.getElementById('current-name').innerHTML = state.name;
 }
 
 function createLobby() {
@@ -201,10 +201,16 @@ function joinLobbyFailedHandler(event) {
 }
 
 function lobbyJoinedHandler(event) {
-    document.getElementById('current-lobby').innerHTML = event.lobby.lobbyId
-    document.getElementById('lobby-players').innerHTML = JSON.stringify(event.lobby.players)
+    state.lobbyId = event.lobby.lobbyId
+    state.players = event.lobby.players
+    document.getElementById('current-lobby').innerHTML = state.lobbyId
+    document.getElementById('lobby-players').innerHTML = JSON.stringify(state.players)
 }
 
+function playerJoinedHandler(event) {
+    state.players.push(event.player)
+    document.getElementById('lobby-players').innerHTML = JSON.stringify(state.players)
+}
 
 window.onload = function () {
     document.getElementById('join-lobby').addEventListener("click", () => joinLobby())

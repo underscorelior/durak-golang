@@ -15,7 +15,7 @@ var (
 	pingInterval = (pongWait * 9) / 10 // Has to be lower than pongWait, this is the interval for the client to respond
 )
 
-type ClientList map[*Client]bool
+type ClientList map[*Client]struct{}
 
 type Client struct {
 	Name   string

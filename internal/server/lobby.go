@@ -63,7 +63,7 @@ func (l *Lobby) addClient(client *Client) {
 	l.Lock()
 	defer l.Unlock()
 
-	l.clients[client] = true
+	l.clients[client] = struct{}{}
 }
 
 func (l *Lobby) removeClient(client *Client) {
@@ -93,4 +93,13 @@ func (l *Lobby) lobbyPlayers() []LobbyPlayer {
 	}
 
 	return lobbyPlayers
+}
+
+func (l *Lobby) broadcast(event Event, ignored ClientList) {
+	for client := range l.clients {
+		if _, ok := ignored[client]; ok {
+			continue
+		}
+		client.egress <- event
+	}
 }

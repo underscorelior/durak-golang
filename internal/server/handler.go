@@ -33,11 +33,6 @@ func UpdateUser(event Event, c *Client) error {
 }
 
 func CreateLobby(event Event, c *Client) error {
-	var createLobbyEvent CreateLobbyEvent
-	if err := json.Unmarshal(event.Payload, &createLobbyEvent); err != nil {
-		return fmt.Errorf("Bad payload in request: %v", err)
-	}
-
 	// TODO: Need to implement ratelimit system
 	lobby := c.manager.NewLobby()
 	c.manager.addLobby(lobby)
@@ -113,6 +108,25 @@ func JoinLobby(event Event, c *Client) error {
 	}
 
 	c.egress <- lobbyJoined
+
+	var playerJoinedMsg PlayerJoinedEvent
+
+	playerJoinedMsg.Player = LobbyPlayer{Name: c.Name, UserID: c.UserID}
+
+	broadcastData, err := json.Marshal(playerJoinedMsg)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal lobby joined message: %v", err)
+	}
+
+	playerJoined := Event{
+		Payload: broadcastData,
+		Type:    EventPlayerJoined,
+	}
+
+	ignored := ClientList{
+		c: {},
+	}
+	lobby.broadcast(playerJoined, ignored)
 
 	return nil
 }

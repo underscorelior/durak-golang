@@ -98,7 +98,7 @@ func (m *Manager) addClient(client *Client) {
 	m.Lock()
 	defer m.Unlock()
 
-	m.clients[client] = true
+	m.clients[client] = struct{}{}
 }
 
 func (m *Manager) removeClient(client *Client) {
