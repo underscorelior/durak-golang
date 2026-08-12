@@ -1,7 +1,6 @@
 package server
 
 import (
-	"durak/internal/game"
 	"encoding/json"
 )
 
@@ -58,8 +57,7 @@ type JoinLobbyFailedEvent struct {
 
 // Sent by server to recently joined client
 type LobbyJoinedEvent struct {
-	LobbyID string               `json:"lobbyId"`
-	State   game.ClientGameState `json:"game_state"`
+	Lobby LobbySnapshot `json:"lobby"`
 }
 
 type LeaveLobbyEvent struct {

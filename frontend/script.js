@@ -53,8 +53,8 @@ class JoinLobbyFailedEvent {
 }
 
 class LobbyJoinedEvent {
-    constructor(state) {
-        this.state = state
+    constructor(lobby) {
+        this.lobby = lobby
     }
 }
 
@@ -99,14 +99,12 @@ function routeEvent(event) {
             break;
         }
         case 'join_lobby_failed': {
-            console.log(event.payload)
             const joinLobbyFailedEvent = new JoinLobbyFailedEvent(event.payload)
             joinLobbyFailedHandler(joinLobbyFailedEvent)
             break;
         }
         case 'lobby_joined': {
-            console.log(event.payload)
-            const lobbyJoinedEvent = new LobbyJoinedEvent(event.payload)
+            const lobbyJoinedEvent = new LobbyJoinedEvent(event.payload.lobby)
             lobbyJoinedHandler(lobbyJoinedEvent)
             break;
         }
@@ -199,11 +197,12 @@ function joinLobby(lobbyId = null) {
 }
 
 function joinLobbyFailedHandler(event) {
-    console.log(event)
     alert(`${event.code}: ${event.message} (${event.lobbyId})`)
 }
 
 function lobbyJoinedHandler(event) {
+    document.getElementById('current-lobby').innerHTML = event.lobby.lobbyId
+    document.getElementById('lobby-players').innerHTML = JSON.stringify(event.lobby.players)
 }
 
 

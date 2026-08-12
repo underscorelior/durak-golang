@@ -67,6 +67,10 @@ func JoinLobby(event Event, c *Client) error {
 		return fmt.Errorf("Bad payload in request: %v", err)
 	}
 
+	if c.lobby != nil && joinLobbyEvent.LobbyID == c.lobby.LobbyID {
+		return nil // How else should I handle this?
+	}
+
 	lobby, ok := c.manager.lobbies[joinLobbyEvent.LobbyID]
 
 	if !ok {
@@ -92,8 +96,11 @@ func JoinLobby(event Event, c *Client) error {
 	}
 
 	c.lobby = lobby
+	lobby.addClient(c)
 
 	var lobbyJoinedMsg LobbyJoinedEvent
+
+	lobbyJoinedMsg.Lobby = lobby.SnapshotFor(c)
 
 	data, err := json.Marshal(lobbyJoinedMsg)
 	if err != nil {

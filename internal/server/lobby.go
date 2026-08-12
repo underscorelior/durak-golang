@@ -1,6 +1,7 @@
 package server
 
 import (
+	"durak/internal/game"
 	"sync"
 
 	"github.com/google/uuid"
@@ -11,15 +12,31 @@ type Lobby struct {
 	LobbyID string
 	sync.RWMutex
 
-	clients ClientList
+	MaxPlayers uint8
+	clients    ClientList
+	game       *game.Game
+
 	manager *Manager
+}
+
+type LobbyPlayer struct {
+	Name   string `json:"name"`
+	UserID string `json:"userId"`
+}
+
+type LobbySnapshot struct {
+	LobbyID    string                `json:"lobbyId"`
+	Players    []LobbyPlayer         `json:"players"`
+	MaxPlayers uint8                 `json:"maxPlayers"`
+	GameState  *game.ClientGameState `json:"gameState,omitempty"`
 }
 
 func (m *Manager) NewLobby() *Lobby {
 	l := &Lobby{
-		clients: make(ClientList),
-		LobbyID: uuid.NewString(),
-		manager: m,
+		clients:    make(ClientList),
+		LobbyID:    uuid.NewString(),
+		MaxPlayers: 4,
+		manager:    m,
 	}
 
 	return l
@@ -54,4 +71,26 @@ func (l *Lobby) removeClient(client *Client) {
 	defer l.Unlock()
 
 	delete(l.clients, client)
+}
+
+func (l *Lobby) gameStateFor(c *Client) *game.ClientGameState {
+	return nil
+}
+
+func (l *Lobby) SnapshotFor(c *Client) LobbySnapshot {
+	return LobbySnapshot{
+		LobbyID:    l.LobbyID,
+		Players:    l.lobbyPlayers(),
+		MaxPlayers: l.MaxPlayers,
+		GameState:  l.gameStateFor(c),
+	}
+}
+
+func (l *Lobby) lobbyPlayers() []LobbyPlayer {
+	var lobbyPlayers []LobbyPlayer
+	for player := range l.clients {
+		lobbyPlayers = append(lobbyPlayers, LobbyPlayer{player.Name, player.UserID})
+	}
+
+	return lobbyPlayers
 }

@@ -1,9 +1,7 @@
 package server
 
 import (
-	"durak/internal/game"
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -20,18 +18,14 @@ var (
 type ClientList map[*Client]bool
 
 type Client struct {
-	Name    string
-	UserID  string
-	LobbyID *string
-
-	gameState *game.ClientGameState
+	Name   string
+	UserID string
 
 	lobby *Lobby
 
 	connection *websocket.Conn
 	manager    *Manager
-
-	egress chan Event
+	egress     chan Event
 }
 
 func NewClient(conn *websocket.Conn, manager *Manager, name string) *Client {
@@ -114,13 +108,13 @@ func (c *Client) writeMessages() {
 				log.Println("Error in sending ping: ", err)
 				return
 			}
-			fmt.Println(c.Name, "- Ping")
+			// fmt.Println(c.Name, "- Ping")
 		}
 
 	}
 }
 
 func (c *Client) pongHandler(pongMsg string) error {
-	fmt.Println(c.Name, "- Pong")
+	// fmt.Println(c.Name, "- Pong")
 	return c.connection.SetReadDeadline(time.Now().Add(pongWait))
 }
