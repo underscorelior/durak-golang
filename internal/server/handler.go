@@ -34,7 +34,7 @@ func UpdateUser(event Event, c *Client) error {
 
 func CreateLobby(event Event, c *Client) error {
 	// TODO: Need to implement ratelimit system
-	lobby := c.manager.NewLobby()
+	lobby := c.manager.NewLobby(c.UserID)
 	c.manager.addLobby(lobby)
 
 	var lobbyCreatedMsg LobbyCreatedEvent

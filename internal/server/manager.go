@@ -78,6 +78,7 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 	var connEstMsg ConnectionEstablishedEvent
 
 	connEstMsg.Name = name
+	connEstMsg.UserID = client.UserID
 	connEstMsg.Lobbies = slices.Collect(maps.Keys(m.lobbies))
 
 	data, err := json.Marshal(connEstMsg)

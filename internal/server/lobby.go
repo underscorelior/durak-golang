@@ -22,6 +22,7 @@ type Lobby struct {
 	MaxPlayers int
 	positions  []bool
 
+	Host    string
 	clients ClientList
 	players PlayerList
 	game    *game.Game
@@ -31,16 +32,19 @@ type Lobby struct {
 
 type LobbySnapshot struct {
 	LobbyID    string                  `json:"lobbyId"`
+	Host       string                  `json:"host"`
 	Players    []Player                `json:"players"`
 	MaxPlayers int                     `json:"maxPlayers"`
+	Position   int                     `json:"position"`
 	GameState  *game.GameStateSnapshot `json:"gameState,omitempty"`
 }
 
-func (m *Manager) NewLobby() *Lobby {
+func (m *Manager) NewLobby(userID string) *Lobby {
 	l := &Lobby{
+		LobbyID:    uuid.NewString(),
 		clients:    make(ClientList),
 		players:    make(PlayerList),
-		LobbyID:    uuid.NewString(),
+		Host:       userID,
 		MaxPlayers: 4,
 		positions:  make([]bool, 4),
 		manager:    m,
@@ -100,8 +104,10 @@ func (l *Lobby) usePosition(pos int) int {
 func (l *Lobby) SnapshotFor(c *Client) LobbySnapshot {
 	snapshot := LobbySnapshot{
 		LobbyID:    l.LobbyID,
+		Host:       l.Host,
 		Players:    l.playerSnapshots(),
 		MaxPlayers: l.MaxPlayers,
+		Position:   l.players[c.UserID].Position,
 	}
 
 	if l.game != nil {
