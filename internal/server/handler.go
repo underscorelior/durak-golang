@@ -69,29 +69,37 @@ func JoinLobby(event Event, c *Client) error {
 	lobby, ok := c.manager.lobbies[joinLobbyEvent.LobbyID]
 
 	if !ok {
-		var joinLobbyFailedMsg JoinLobbyFailedEvent
+		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyID, "lobby_not_found", "Lobby does not exist")
 
-		joinLobbyFailedMsg.Code = "lobby_not_found"
-		joinLobbyFailedMsg.Message = "Lobby does not exist"
-		joinLobbyFailedMsg.LobbyID = joinLobbyEvent.LobbyID
-
-		data, err := json.Marshal(joinLobbyFailedMsg)
 		if err != nil {
-			return fmt.Errorf("Failed to marshal JoinLobbyFailed message: %v", err)
-		}
-
-		joinLobbyFailed := Event{
-			Payload: data,
-			Type:    EventJoinLobbyFailed,
+			return err
 		}
 
 		c.egress <- joinLobbyFailed
+		return nil // I dont think this should be nil
+	}
 
+	if len(lobby.clients) >= int(lobby.MaxPlayers) {
+		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyID, "lobby_full", fmt.Sprintf("Lobby is full (Max %v)", lobby.MaxPlayers))
+
+		if err != nil {
+			return err
+		}
+
+		c.egress <- joinLobbyFailed
 		return nil // I dont think this should be nil
 	}
 
 	c.lobby = lobby
-	lobby.addClient(c)
+
+	pos := lobby.nextAvailablePosition()
+	p := &Player{
+		UserID:   c.UserID,
+		Name:     c.Name,
+		Position: lobby.usePosition(pos),
+	}
+
+	lobby.addClient(c, p)
 
 	var lobbyJoinedMsg LobbyJoinedEvent
 
@@ -111,7 +119,7 @@ func JoinLobby(event Event, c *Client) error {
 
 	var playerJoinedMsg PlayerJoinedEvent
 
-	playerJoinedMsg.Player = LobbyPlayer{Name: c.Name, UserID: c.UserID}
+	playerJoinedMsg.Player = *p
 
 	broadcastData, err := json.Marshal(playerJoinedMsg)
 	if err != nil {
@@ -124,9 +132,27 @@ func JoinLobby(event Event, c *Client) error {
 	}
 
 	ignored := ClientList{
-		c: {},
+		c.UserID: c,
 	}
 	lobby.broadcast(playerJoined, ignored)
 
 	return nil
+}
+
+func createLobbyFailedEvent(lobbyID, code, message string) (Event, error) {
+	var joinLobbyFailedMsg JoinLobbyFailedEvent
+
+	joinLobbyFailedMsg.Code = code
+	joinLobbyFailedMsg.Message = message
+	joinLobbyFailedMsg.LobbyID = lobbyID
+
+	data, err := json.Marshal(joinLobbyFailedMsg)
+	if err != nil {
+		return Event{}, fmt.Errorf("Failed to marshal JoinLobbyFailed message: %v", err)
+	}
+
+	return Event{
+		Payload: data,
+		Type:    EventJoinLobbyFailed,
+	}, nil
 }

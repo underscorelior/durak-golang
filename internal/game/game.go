@@ -1,13 +1,19 @@
 package game
 
-import "math/rand/v2"
+import (
+	"math/rand/v2"
+)
+
+type PlayerState struct {
+	hand []Card
+}
 
 type Game struct {
 	deck    []Card
-	players []Player
+	players map[string]*PlayerState
 
 	Trump Card
-	Turn  *Turn
+	Turn  Turn
 }
 
 // Generates a full deck of cards
@@ -44,4 +50,8 @@ func (g *Game) InitializeGame() {
 
 	g.DealCards()
 	g.Trump, g.deck = g.deck[0], g.deck[1:]
+}
+
+func (g *Game) DeckSize() int {
+	return len(g.deck)
 }

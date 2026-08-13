@@ -12,8 +12,8 @@ func (g *Game) CanBeat(attack Card, defense Card) bool {
 }
 
 // Checks if a player is allowed to place (Both existing ranks and if its attacker)
-func (t *Turn) CanPlace(player Player, card Card) bool {
-	if t.Phase == INITIAL && player.ID == t.InitialAttackerID {
+func (t *Turn) CanPlace(playerID string, card Card) bool {
+	if t.Phase == INITIAL && playerID == t.InitialAttackerID {
 		return true
 	}
 
@@ -27,24 +27,24 @@ func (t *Turn) CanPlace(player Player, card Card) bool {
 
 	// TODO: This would mean that no one can attack while there is a card that has not been defended,
 	// 		 need to find this out. Also might cause an issue with multiple cards.
-	return exists && t.IsAttacker(player) && t.Phase == ATTACK
+	return exists && t.IsAttacker(playerID) && t.Phase == ATTACK
 }
 
 // Checks if the Player is allowed to make an attack
 //   - Checks if the player is a defender
 //   - Checks if the player is the initial attacker and the current phase is INITIAL
 //   - Checks if the player is an attacker and if the Rank exists
-func (g *Game) CanAttack(player Player, attack Card) bool {
-	if g.Turn.IsDefender(player) {
+func (g *Game) CanAttack(playerID string, attack Card) bool {
+	if g.Turn.IsDefender(playerID) {
 		return false
 	}
 
-	return g.Turn.CanPlace(player, attack)
+	return g.Turn.CanPlace(playerID, attack)
 }
 
 // Checks if the player is capable of making a valid defense
-func (g *Game) CanDefend(player Player, attack Card, defense Card) bool {
-	if !g.Turn.IsDefender(player) {
+func (g *Game) CanDefend(playerID string, attack Card, defense Card) bool {
+	if !g.Turn.IsDefender(playerID) {
 		return false
 	}
 
@@ -52,8 +52,8 @@ func (g *Game) CanDefend(player Player, attack Card, defense Card) bool {
 }
 
 // Checks if a player is allowed to take
-func (g *Game) CanTake(player Player) bool {
-	if !g.Turn.IsDefender(player) {
+func (g *Game) CanTake(playerID string) bool {
+	if !g.Turn.IsDefender(playerID) {
 		return false
 	}
 

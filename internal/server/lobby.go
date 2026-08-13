@@ -7,35 +7,42 @@ import (
 	"github.com/google/uuid"
 )
 
-type LobbyList map[string]*Lobby
+type PlayerList map[string]*Player // UserID -> Player
+type Player struct {
+	Name     string `json:"name"`
+	UserID   string `json:"userId"`
+	Position int    `json:"position"`
+}
+
+type LobbyList map[string]*Lobby // LobbyID -> Lobby
 type Lobby struct {
 	LobbyID string
 	sync.RWMutex
 
-	MaxPlayers uint8
-	clients    ClientList
-	game       *game.Game
+	MaxPlayers int
+	positions  []bool
+
+	clients ClientList
+	players PlayerList
+	game    *game.Game
 
 	manager *Manager
 }
 
-type LobbyPlayer struct {
-	Name   string `json:"name"`
-	UserID string `json:"userId"`
-}
-
 type LobbySnapshot struct {
-	LobbyID    string                `json:"lobbyId"`
-	Players    []LobbyPlayer         `json:"players"`
-	MaxPlayers uint8                 `json:"maxPlayers"`
-	GameState  *game.ClientGameState `json:"gameState,omitempty"`
+	LobbyID    string                  `json:"lobbyId"`
+	Players    []Player                `json:"players"`
+	MaxPlayers int                     `json:"maxPlayers"`
+	GameState  *game.GameStateSnapshot `json:"gameState,omitempty"`
 }
 
 func (m *Manager) NewLobby() *Lobby {
 	l := &Lobby{
 		clients:    make(ClientList),
+		players:    make(PlayerList),
 		LobbyID:    uuid.NewString(),
 		MaxPlayers: 4,
+		positions:  make([]bool, 4),
 		manager:    m,
 	}
 
@@ -59,45 +66,64 @@ func (m *Manager) removeLobby(lobby *Lobby) {
 	// }
 }
 
-func (l *Lobby) addClient(client *Client) {
+func (l *Lobby) addClient(c *Client, p *Player) {
 	l.Lock()
 	defer l.Unlock()
 
-	l.clients[client] = struct{}{}
+	l.clients[c.UserID] = c
+	l.players[c.UserID] = p
 }
 
-func (l *Lobby) removeClient(client *Client) {
+func (l *Lobby) removeClient(c *Client) {
 	l.Lock()
 	defer l.Unlock()
 
-	delete(l.clients, client)
+	delete(l.clients, c.UserID)
+	delete(l.players, c.UserID)
 }
 
-func (l *Lobby) gameStateFor(c *Client) *game.ClientGameState {
-	return nil
+func (l *Lobby) nextAvailablePosition() int {
+	for i := range l.MaxPlayers {
+		if !l.positions[i] {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func (l *Lobby) usePosition(pos int) int {
+	l.positions[pos] = true
+	return pos
 }
 
 func (l *Lobby) SnapshotFor(c *Client) LobbySnapshot {
-	return LobbySnapshot{
+	snapshot := LobbySnapshot{
 		LobbyID:    l.LobbyID,
-		Players:    l.lobbyPlayers(),
+		Players:    l.playerSnapshots(),
 		MaxPlayers: l.MaxPlayers,
-		GameState:  l.gameStateFor(c),
 	}
+
+	if l.game != nil {
+		state := l.game.StateFor(c.UserID)
+		snapshot.GameState = &state
+	}
+
+	return snapshot
 }
 
-func (l *Lobby) lobbyPlayers() []LobbyPlayer {
-	var lobbyPlayers []LobbyPlayer
-	for player := range l.clients {
-		lobbyPlayers = append(lobbyPlayers, LobbyPlayer{player.Name, player.UserID})
+func (l *Lobby) playerSnapshots() []Player {
+	var lobbyPlayers []Player
+	for _, p := range l.players {
+		lobbyPlayers = append(lobbyPlayers, *p)
 	}
 
 	return lobbyPlayers
 }
 
 func (l *Lobby) broadcast(event Event, ignored ClientList) {
-	for client := range l.clients {
-		if _, ok := ignored[client]; ok {
+	for _, client := range l.clients {
+		if _, ok := ignored[client.UserID]; ok {
 			continue
 		}
 		client.egress <- event

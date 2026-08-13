@@ -59,5 +59,5 @@ type LobbyJoinedEvent struct {
 }
 
 type PlayerJoinedEvent struct {
-	Player LobbyPlayer `json:"player"`
+	Player Player `json:"player"`
 }

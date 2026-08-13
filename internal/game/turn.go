@@ -19,12 +19,12 @@ const (
 )
 
 // Checks if the player is a valid attacker
-func (t *Turn) IsAttacker(player Player) bool {
-	_, exists := t.AttackerIDs[player.ID]
+func (t *Turn) IsAttacker(playerID string) bool {
+	_, exists := t.AttackerIDs[playerID]
 	return exists
 }
 
 // Checks if the player is the current defender
-func (t *Turn) IsDefender(player Player) bool {
-	return player.ID == t.InitialAttackerID
+func (t *Turn) IsDefender(playerID string) bool {
+	return playerID == t.InitialAttackerID
 }

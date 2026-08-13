@@ -15,17 +15,17 @@ var (
 	pingInterval = (pongWait * 9) / 10 // Has to be lower than pongWait, this is the interval for the client to respond
 )
 
-type ClientList map[*Client]struct{}
+type ClientList map[string]*Client // UserID -> Client
 
 type Client struct {
 	Name   string
 	UserID string
 
-	lobby *Lobby
-
 	connection *websocket.Conn
+	lobby      *Lobby
 	manager    *Manager
-	egress     chan Event
+
+	egress chan Event
 }
 
 func NewClient(conn *websocket.Conn, manager *Manager, name string) *Client {

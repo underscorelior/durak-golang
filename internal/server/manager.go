@@ -98,16 +98,16 @@ func (m *Manager) addClient(client *Client) {
 	m.Lock()
 	defer m.Unlock()
 
-	m.clients[client] = struct{}{}
+	m.clients[client.UserID] = client
 }
 
 func (m *Manager) removeClient(client *Client) {
 	m.Lock()
 	defer m.Unlock()
 
-	if _, ok := m.clients[client]; ok {
+	if _, ok := m.clients[client.UserID]; ok {
 		client.connection.Close()
-		delete(m.clients, client)
+		delete(m.clients, client.UserID)
 	}
 }
 
