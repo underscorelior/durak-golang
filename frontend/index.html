@@ -16,8 +16,6 @@
 		<h6>Players: <span id="lobby-players">N/A</span></h6>
 		<h4>Username: <span id="current-name">N/A</span></h4>
 
-		<p>Hand: <span id="hand"></span></p>
-
 		<input
 			type="text"
 			name="username"
@@ -35,6 +33,7 @@
 		<button type="submit" id="join-lobby">Join</button>
 		<br />
 		<button type="submit" id="create-lobby">Create Lobby</button>
+		<button type="submit" id="start-game" disabled>Start Game</button>
 		<br />
 		<br />
 		<br />
@@ -50,6 +49,10 @@
 				You
 			</div>
 		</div>
+
+		<p>Hand: <span id="hand"></span></p>
+		<p>Trump: <span id="trump"></span></p>
+		<p>Deck Size: <span id="deck-size"></span></p>
 
 		<style type="text/css">
 			body {

@@ -3,9 +3,8 @@ let conn;
 class GameState {
     constructor() {
         this.name = "default"
+        this.lobby = {}
         this.userId = ""
-        this.lobbyId = ""
-        this.lobbyHost = ""
         this.players = []
         this.position = -1
         this.maxPlayers = -1
@@ -38,12 +37,6 @@ class UpdateUserEvent {
 class UserUpdatedEvent {
     constructor(name) {
         this.name = name
-    }
-}
-
-class CreateLobbyEvent {
-    constructor() {
-
     }
 }
 
@@ -80,6 +73,11 @@ class PlayerJoinedEvent {
     }
 }
 
+class GameStartedEvent {
+    constructor(lobby) {
+        this.lobby = lobby
+    }
+}
 
 function routeEvent(event) {
     if (event.type === undefined) {
@@ -115,6 +113,11 @@ function routeEvent(event) {
         case 'player_joined': {
             const playerJoinedEvent = new PlayerJoinedEvent(event.payload.player)
             playerJoinedHandler(playerJoinedEvent)
+            break;
+        }
+        case 'game_started': {
+            const gameStartedEvent = new GameStartedEvent(event.payload.lobby)
+            gameStartedHandler(gameStartedEvent)
             break;
         }
         default: {
@@ -185,9 +188,7 @@ function userUpdatedHandler(updatedEvent) {
 }
 
 function createLobby() {
-    const createEvent = new CreateLobbyEvent()
-    sendEvent('create_lobby', createEvent)
-
+    sendEvent('create_lobby', {})
     return false;
 }
 
@@ -210,21 +211,40 @@ function joinLobbyFailedHandler(event) {
 }
 
 function lobbyJoinedHandler(event) {
-    state.lobbyId = event.lobby.lobbyId
-    state.players = event.lobby.players
-    state.lobbyHost = event.lobby.host
-    state.maxPlayers = event.lobby.maxPlayers
-    state.position = event.lobby.position
-    document.getElementById('current-lobby').innerHTML = state.lobbyId
-    document.getElementById('lobby-players').innerHTML = JSON.stringify(state.players)
-    document.getElementById('lobby-host').innerHTML = state.lobbyHost === state.userId
-    updatePlayerDisplay(state.position, state.players)
+    state.lobby = event.lobby
+    document.getElementById('current-lobby').innerHTML = state.lobby.lobbyId
+    document.getElementById('lobby-players').innerHTML = JSON.stringify(state.lobby.players)
+    document.getElementById('lobby-host').innerHTML = state.lobby.host === state.userId
+    updatePlayerDisplay(state.lobby.position, state.lobby.players)
+
+    if (state.lobby.host === state.userId && state.lobby.players.length > 1) {
+        document.getElementById('start-game').disabled = false
+    }
 }
 
 function playerJoinedHandler(event) {
-    state.players.push(event.player)
-    document.getElementById('lobby-players').innerHTML = JSON.stringify(state.players)
-    updatePlayerDisplay(state.position, state.players)
+    let isHost = state.lobby.host === state.userId
+    state.lobby.players.push(event.player)
+    document.getElementById('lobby-players').innerHTML = JSON.stringify(state.lobby.players)
+    updatePlayerDisplay(state.lobby.position, state.lobby.players)
+    console.log(isHost, state.lobby.players.length, state)
+    if (isHost && state.lobby.players.length > 1) {
+        console.log("Is host and len > 1")
+        document.getElementById('start-game').disabled = false
+    }
+}
+
+function startGame() {
+    sendEvent('start_game', {})
+    return false
+}
+
+function gameStartedHandler(event) {
+    state.lobby = event.lobby
+    updatePlayerDisplay(state.lobby.position, state.lobby.players)
+    document.getElementById("hand").innerHTML = JSON.stringify(state.lobby.gameState.hand)
+    document.getElementById("trump").innerHTML = JSON.stringify(state.lobby.gameState.trump)
+    document.getElementById("deck-size").innerHTML = state.lobby.gameState.deckSize
 }
 
 function updatePlayerDisplay(position, players) {
@@ -232,15 +252,15 @@ function updatePlayerDisplay(position, players) {
     if (you)
         document.getElementById('bottom-box').innerHTML = `${you.name} (${you.position})`// You
 
-    let left = players.find((pl) => pl.position == (position + 1) % state.maxPlayers)
+    let left = players.find((pl) => pl.position == (position + 1) % state.lobby.maxPlayers)
     if (left)
         document.getElementById('left-box').innerHTML = `${left.name} (${left.position})` // Player to your left (position + 1 % maxPlayers)
 
-    let front = players.find((pl) => pl.position == (position + 2) % state.maxPlayers)
+    let front = players.find((pl) => pl.position == (position + 2) % state.lobby.maxPlayers)
     if (front)
         document.getElementById('front-box').innerHTML = `${front.name} (${front.position})` // Player to your front (position + 2 % maxPlayers)
 
-    let right = players.find((pl) => pl.position == (position + 3) % state.maxPlayers)
+    let right = players.find((pl) => pl.position == (position + 3) % state.lobby.maxPlayers)
     if (right)
         document.getElementById('right-box').innerHTML = `${right.name} (${right.position})` // player to your right (positon + 3 % maxPlayers)
 }
@@ -249,5 +269,6 @@ window.onload = function () {
     document.getElementById('join-lobby').addEventListener("click", () => joinLobby())
     document.getElementById('set-name').onclick = updateUser
     document.getElementById('create-lobby').onclick = createLobby
+    document.getElementById('start-game').onclick = startGame
     connectWebsocket()
 };

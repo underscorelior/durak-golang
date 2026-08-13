@@ -45,6 +45,7 @@ func (m *Manager) setupEventHandlers() {
 	m.handlers[EventUpdateUser] = UpdateUser
 	m.handlers[EventCreateLobby] = CreateLobby
 	m.handlers[EventJoinLobby] = JoinLobby
+	m.handlers[EventStartGame] = StartGame
 }
 
 func (m *Manager) routeEvent(event Event, c *Client) error {

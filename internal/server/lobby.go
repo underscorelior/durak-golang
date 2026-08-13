@@ -101,6 +101,18 @@ func (l *Lobby) usePosition(pos int) int {
 	return pos
 }
 
+func (l *Lobby) Snapshot() LobbySnapshot {
+	snapshot := LobbySnapshot{
+		LobbyID:    l.LobbyID,
+		Host:       l.Host,
+		Players:    l.playerSnapshots(),
+		MaxPlayers: l.MaxPlayers,
+		Position:   -1,
+	}
+
+	return snapshot
+}
+
 func (l *Lobby) SnapshotFor(c *Client) LobbySnapshot {
 	snapshot := LobbySnapshot{
 		LobbyID:    l.LobbyID,
@@ -111,8 +123,7 @@ func (l *Lobby) SnapshotFor(c *Client) LobbySnapshot {
 	}
 
 	if l.game != nil {
-		state := l.game.StateFor(c.UserID)
-		snapshot.GameState = &state
+		snapshot.GameState = l.game.StateFor(c.UserID)
 	}
 
 	return snapshot

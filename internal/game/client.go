@@ -26,8 +26,8 @@ func (g *Game) playerSnapshots() []GamePlayerState {
 	return playerSnapshots
 }
 
-func (g *Game) StateFor(userID string) GameStateSnapshot {
-	return GameStateSnapshot{
+func (g *Game) StateFor(userID string) *GameStateSnapshot {
+	return &GameStateSnapshot{
 		Players:  g.playerSnapshots(),
 		Hand:     g.players[userID].hand,
 		Trump:    g.Trump,

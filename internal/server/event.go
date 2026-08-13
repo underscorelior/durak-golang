@@ -23,6 +23,8 @@ const (
 	EventPlayerJoined          = "player_joined"
 	EventLeaveLobby            = "leave_lobby"
 	EventPlayerLeft            = "player_left"
+	EventStartGame             = "start_game"
+	EventGameStarted           = "game_started"
 )
 
 type ConnectionEstablishedEvent struct {
@@ -61,4 +63,8 @@ type LobbyJoinedEvent struct {
 
 type PlayerJoinedEvent struct {
 	Player Player `json:"player"`
+}
+
+type GameStartedEvent struct {
+	Lobby LobbySnapshot `json:"lobby"`
 }

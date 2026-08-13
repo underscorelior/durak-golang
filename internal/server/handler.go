@@ -1,8 +1,11 @@
 package server
 
 import (
+	"durak/internal/game"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 )
 
 func UpdateUser(event Event, c *Client) error {
@@ -155,4 +158,35 @@ func createLobbyFailedEvent(lobbyID, code, message string) (Event, error) {
 		Payload: data,
 		Type:    EventJoinLobbyFailed,
 	}, nil
+}
+
+func StartGame(event Event, c *Client) error {
+	l := c.lobby
+
+	if c.UserID != l.Host {
+		// TODO: Return some sort of Error event
+		return nil
+	}
+
+	l.game = game.InitializeGame(slices.Collect(maps.Keys(l.players)))
+	var gameStartedMsg GameStartedEvent
+	gameStartedMsg.Lobby = l.Snapshot()
+
+	for _, cl := range c.lobby.clients {
+		gameStartedMsg.Lobby.Position = l.players[cl.UserID].Position
+		gameStartedMsg.Lobby.GameState = l.game.StateFor(cl.UserID)
+
+		data, err := json.Marshal(gameStartedMsg)
+		if err != nil {
+			return fmt.Errorf("Failed to marshal lobby joined message: %v", err)
+		}
+
+		event := Event{
+			Payload: data,
+			Type:    EventGameStarted,
+		}
+		cl.egress <- event
+	}
+
+	return nil
 }

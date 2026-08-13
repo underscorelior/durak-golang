@@ -44,12 +44,20 @@ func (g *Game) DealCards() {
 }
 
 // Creates and shuffles the deck, deals cards and picks the Trump card
-func (g *Game) InitializeGame() {
+func InitializeGame(players []string) *Game {
+	var g Game
+	g.players = make(map[string]*PlayerState, len(players))
+	for _, k := range players {
+		g.players[k] = &PlayerState{}
+	}
+
 	g.deck = CreateDeck()
 	g.ShuffleDeck()
 
 	g.DealCards()
 	g.Trump, g.deck = g.deck[0], g.deck[1:]
+
+	return &g
 }
 
 func (g *Game) DeckSize() int {
