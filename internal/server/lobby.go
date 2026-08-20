@@ -20,6 +20,7 @@ type Lobby struct {
 	sync.RWMutex
 
 	MaxPlayers int
+	IsPrivate  bool
 	positions  []bool
 
 	Host    string
@@ -31,23 +32,38 @@ type Lobby struct {
 }
 
 type LobbySnapshot struct {
-	LobbyID    string                  `json:"lobbyId"`
-	Host       string                  `json:"host"`
-	Players    []Player                `json:"players"`
-	MaxPlayers int                     `json:"maxPlayers"`
-	Position   int                     `json:"position"`
-	GameState  *game.GameStateSnapshot `json:"gameState,omitempty"`
+	LobbyID    string `json:"lobbyId"`
+	Host       string `json:"hostId"`
+	IsPrivate  bool   `json:"isPrivate"`
+	MaxPlayers int    `json:"maxPlayers"`
+
+	Players []Player `json:"players"`
+
+	Position  int                     `json:"position"`
+	GameState *game.GameStateSnapshot `json:"gameState,omitempty"`
+}
+
+type MenuLobby struct {
+	LobbyID     string `json:"lobbyId"`
+	HostName    string `json:"hostName"`
+	PlayerCount int    `json:"playerCount"`
+	MaxPlayers  int    `json:"maxPlayers"`
+
+	IsOpen    bool `json:"isOpen"`
+	IsPlaying bool `json:"isPlaying"`
 }
 
 func (m *Manager) NewLobby(userID string) *Lobby {
 	l := &Lobby{
 		LobbyID:    uuid.NewString(),
-		clients:    make(ClientList),
-		players:    make(PlayerList),
-		Host:       userID,
 		MaxPlayers: 4,
-		positions:  make([]bool, 4),
-		manager:    m,
+		IsPrivate:  false,
+		Host:       userID,
+
+		clients:   make(ClientList),
+		players:   make(PlayerList),
+		positions: make([]bool, 4),
+		manager:   m,
 	}
 
 	return l
@@ -68,6 +84,36 @@ func (m *Manager) removeLobby(lobby *Lobby) {
 	// Handle some sort of lobby deletion (DB stuff)
 	delete(m.lobbies, lobby.LobbyID)
 	// }
+}
+
+func (m *Manager) MenuLobbies() []MenuLobby {
+	var lobbies []MenuLobby
+
+	for lobbyID := range m.lobbies {
+		l := m.lobbies[lobbyID]
+		if l.IsPrivate {
+			continue
+		}
+
+		pc := len(l.players)
+
+		// TODO: Find a better definition of "isOpen"
+		isOpen := pc < l.MaxPlayers
+
+		menuLobby := MenuLobby{
+			LobbyID:     l.LobbyID,
+			HostName:    l.players[l.Host].Name,
+			PlayerCount: pc,
+			MaxPlayers:  l.MaxPlayers,
+
+			IsOpen:    isOpen,
+			IsPlaying: l.game != nil,
+		}
+
+		lobbies = append(lobbies, menuLobby)
+	}
+
+	return lobbies
 }
 
 func (l *Lobby) addClient(c *Client, p *Player) {

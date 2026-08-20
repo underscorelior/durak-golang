@@ -214,16 +214,16 @@ function lobbyJoinedHandler(event) {
     state.lobby = event.lobby
     document.getElementById('current-lobby').innerHTML = state.lobby.lobbyId
     document.getElementById('lobby-players').innerHTML = JSON.stringify(state.lobby.players)
-    document.getElementById('lobby-host').innerHTML = state.lobby.host === state.userId
+    document.getElementById('lobby-host').innerHTML = state.lobby.hostId === state.userId
     updatePlayerDisplay(state.lobby.position, state.lobby.players)
 
-    if (state.lobby.host === state.userId && state.lobby.players.length > 1) {
+    if (state.lobby.hostId === state.userId && state.lobby.players.length > 1) {
         document.getElementById('start-game').disabled = false
     }
 }
 
 function playerJoinedHandler(event) {
-    let isHost = state.lobby.host === state.userId
+    let isHost = state.lobby.hostId === state.userId
     state.lobby.players.push(event.player)
     document.getElementById('lobby-players').innerHTML = JSON.stringify(state.lobby.players)
     updatePlayerDisplay(state.lobby.position, state.lobby.players)

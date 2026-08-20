@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"maps"
 	"net/http"
-	"slices"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -80,7 +78,7 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 
 	connEstMsg.Name = name
 	connEstMsg.UserID = client.UserID
-	connEstMsg.Lobbies = slices.Collect(maps.Keys(m.lobbies))
+	connEstMsg.Lobbies = m.MenuLobbies()
 
 	data, err := json.Marshal(connEstMsg)
 	if err != nil {

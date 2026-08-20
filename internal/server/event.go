@@ -28,9 +28,9 @@ const (
 )
 
 type ConnectionEstablishedEvent struct {
-	UserID  string   `json:"userId"`
-	Name    string   `json:"name"`
-	Lobbies []string `json:"lobbies"` // I think I need to make this to be a json string, will figure out later
+	UserID  string      `json:"userId"`
+	Name    string      `json:"name"`
+	Lobbies []MenuLobby `json:"lobbies"`
 }
 
 type UpdateUserEvent struct {

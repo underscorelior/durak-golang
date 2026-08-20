@@ -43,12 +43,13 @@ var Ranks = [9]Rank{
 }
 
 type Card struct {
-	Suit Suit
-	Rank Rank
+	Suit Suit `json:"suit"`
+	Rank Rank `json:"rank"`
 }
 
+// TODO: Dfiferentiate card by user who played it
 type CardPair struct {
-	AttackCard  Card
-	DefenseCard *Card
-	IsDefended  bool
+	AttackCard  Card  `json:"attackCard"`
+	DefenseCard *Card `json:"defenseCard,omitempty"`
+	IsDefended  bool  `json:"isDefended"`
 }
