@@ -1,5 +1,6 @@
 export enum Events {
 	ConnectionEstablished = 'connection_established',
+	MenuLobbiesUpdated = 'menu_lobbies_updated', // TODO: Find better name
 	UpdateUser = 'update_user',
 	UserUpdated = 'user_updated',
 	CreateLobby = 'create_lobby',
@@ -17,6 +18,10 @@ export enum Events {
 type ConnectionEstablishedPayload = {
 	name: string;
 	user_id: string;
+	lobbies: MenuLobby[];
+};
+
+type MenuLobbiesUpdatedPayload = {
 	lobbies: MenuLobby[];
 };
 
@@ -50,6 +55,7 @@ type LobbyJoinedEvent = {
 
 export type EventPayloads = {
 	[Events.ConnectionEstablished]: ConnectionEstablishedPayload;
+	[Events.MenuLobbiesUpdated]: MenuLobbiesUpdatedPayload;
 	[Events.UpdateUser]: UpdateUserPayload;
 	[Events.UserUpdated]: UserUpdatedPayload;
 	[Events.CreateLobby]: CreateLobbyPayload;

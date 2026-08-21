@@ -1,5 +1,3 @@
-import { connectionState } from '$lib/ws/connection.svelte';
-
 type GlobalState = {
 	user: {
 		name: string | null;
@@ -15,6 +13,11 @@ type GlobalState = {
 	game: GameState | null;
 	lobby: Lobby | null;
 };
+
+export const connectionState = $state<GlobalState['menu']['connection']>({
+	connected: false,
+	connecting: false
+});
 
 export const globalState = $state<GlobalState>({
 	user: {

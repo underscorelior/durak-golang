@@ -4,6 +4,7 @@ import {
 	joinLobbyFailedHandler,
 	lobbyCreatedHandler,
 	lobbyJoinedHandler,
+	menuLobbiesUpdatedHandler,
 	userUpdatedHandler
 } from './handlers';
 
@@ -16,6 +17,10 @@ export function routeEvent(event: WSEvent) {
 	switch (event.type) {
 		case Events.ConnectionEstablished: {
 			connectionEstablishedHandler(event.payload);
+			break;
+		}
+		case Events.MenuLobbiesUpdated: {
+			menuLobbiesUpdatedHandler(event.payload);
 			break;
 		}
 		case Events.UserUpdated: {

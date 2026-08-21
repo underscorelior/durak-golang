@@ -13,6 +13,8 @@ var (
 	pongWait = 10 * time.Second // how long to wait for a pong response, if 10s is up, kick
 
 	pingInterval = (pongWait * 9) / 10 // Has to be lower than pongWait, this is the interval for the client to respond
+
+	menuLobbiesUpdatedInterval = 10 * time.Second // TODO: Or should this be sent as a request from the client in order to allow for a timer?
 )
 
 type ClientList map[string]*Client // UserID -> Client
@@ -80,7 +82,8 @@ func (c *Client) writeMessages() {
 		c.manager.removeClient(c)
 	}()
 
-	ticker := time.NewTicker(pingInterval)
+	pongTicker := time.NewTicker(pingInterval)
+	menuLobbyUpdateTicker := time.NewTicker(menuLobbiesUpdatedInterval)
 
 	for {
 		select {
@@ -92,29 +95,72 @@ func (c *Client) writeMessages() {
 				return
 			}
 
-			data, err := json.Marshal(message)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-
-			if err := c.connection.WriteMessage(websocket.TextMessage, data); err != nil {
+			if err := c.writeEvent(message); err != nil {
 				log.Printf("failed to send message: %v", err)
 			}
 			log.Println("message sent")
 
-		case <-ticker.C:
+		case <-pongTicker.C:
 			if err := c.connection.WriteMessage(websocket.PingMessage, []byte(``)); err != nil {
 				log.Println("Error in sending ping: ", err)
 				return
 			}
 			// fmt.Println(c.Name, "- Ping")
+
+		case <-menuLobbyUpdateTicker.C:
+			event, err := c.menuLobbiesUpdatedHandler()
+			if err != nil {
+				log.Println("Error in sending MenuLobbiesUpdated event")
+				return
+			}
+			if event == nil {
+				continue
+			}
+
+			if err := c.writeEvent(*event); err != nil {
+				log.Printf("failed to send message: %v", err)
+				return
+			}
 		}
 
 	}
 }
 
+func (c *Client) writeEvent(event Event) error {
+	data, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+
+	return c.connection.WriteMessage(websocket.TextMessage, data)
+}
+
 func (c *Client) pongHandler(pongMsg string) error {
 	// fmt.Println(c.Name, "- Pong")
 	return c.connection.SetReadDeadline(time.Now().Add(pongWait))
+}
+
+func (c *Client) menuLobbiesUpdatedHandler() (*Event, error) {
+	if c.lobby != nil {
+		return nil, nil
+	}
+	log.Println("INSIDE OF MENU LOBBY UPDATED HANDLER")
+
+	var menuLobbiesUpdatedMsg MenuLobbiesUpdatedEvent
+
+	menuLobbiesUpdatedMsg.Lobbies = c.manager.MenuLobbies()
+	log.Println("INSIDE OF MENU LOBBY UPDATED HANDLER, 2")
+
+	data, err := json.Marshal(menuLobbiesUpdatedMsg)
+	if err != nil {
+		log.Printf("Failed to marshal MenuLobbiesUpdated message: %v", err)
+		return nil, err
+	}
+
+	menuLobbiesUpdated := Event{
+		Payload: data,
+		Type:    EventMenuLobbiesUpdated,
+	}
+
+	return &menuLobbiesUpdated, nil
 }

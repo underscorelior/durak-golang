@@ -3,7 +3,8 @@ type Lobby = {
 	host_id: string;
 	players: Player[];
 	max_players: number;
-	game_state: GameState;
+	created_at: string;
+	game_state: GameState | null;
 };
 
 type MenuLobby = {
@@ -11,6 +12,7 @@ type MenuLobby = {
 	host_name: string;
 	player_count: number;
 	max_players: number;
+	created_at: string;
 
 	is_open: boolean;
 	is_playing: boolean;

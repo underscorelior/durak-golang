@@ -13,6 +13,7 @@ type EventHandler func(event Event, c *Client) error
 
 const (
 	EventConnectionEstablished = "connection_established"
+	EventMenuLobbiesUpdated    = "menu_lobbies_updated" // TODO: later switch to a "diff" based approach, only send down stuff that changed rather than everything. also if nothing changed, send nothing at all. ALSO FIND A BETTER NAME
 	EventUpdateUser            = "update_user"
 	EventUserUpdated           = "user_updated"
 	EventCreateLobby           = "create_lobby"
@@ -30,6 +31,10 @@ const (
 type ConnectionEstablishedEvent struct {
 	UserID  string      `json:"user_id"`
 	Name    string      `json:"name"`
+	Lobbies []MenuLobby `json:"lobbies"`
+}
+
+type MenuLobbiesUpdatedEvent struct {
 	Lobbies []MenuLobby `json:"lobbies"`
 }
 

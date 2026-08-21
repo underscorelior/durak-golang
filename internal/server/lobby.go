@@ -2,7 +2,9 @@ package server
 
 import (
 	"durak/internal/game"
+	"sort"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -22,6 +24,7 @@ type Lobby struct {
 	MaxPlayers int
 	IsPrivate  bool
 	positions  []bool
+	CreatedAt  time.Time
 
 	Host    string
 	clients ClientList
@@ -32,10 +35,11 @@ type Lobby struct {
 }
 
 type LobbySnapshot struct {
-	LobbyID    string `json:"lobby_id"`
-	Host       string `json:"host_id"`
-	IsPrivate  bool   `json:"is_private"`
-	MaxPlayers int    `json:"max_players"`
+	LobbyID    string    `json:"lobby_id"`
+	Host       string    `json:"host_id"`
+	IsPrivate  bool      `json:"is_private"`
+	MaxPlayers int       `json:"max_players"`
+	CreatedAt  time.Time `json:"created_at"`
 
 	Players []Player `json:"players"`
 
@@ -44,10 +48,11 @@ type LobbySnapshot struct {
 }
 
 type MenuLobby struct {
-	LobbyID     string `json:"lobby_id"`
-	HostName    string `json:"host_name"`
-	PlayerCount int    `json:"player_count"`
-	MaxPlayers  int    `json:"max_players"`
+	LobbyID     string    `json:"lobby_id"`
+	HostName    string    `json:"host_name"`
+	PlayerCount int       `json:"player_count"`
+	MaxPlayers  int       `json:"max_players"`
+	CreatedAt   time.Time `json:"created_at"`
 
 	IsOpen    bool `json:"is_open"`
 	IsPlaying bool `json:"is_playing"`
@@ -59,6 +64,7 @@ func (m *Manager) NewLobby(userID string) *Lobby {
 		MaxPlayers: 4,
 		IsPrivate:  false,
 		Host:       userID,
+		CreatedAt:  time.Now(),
 
 		clients:   make(ClientList),
 		players:   make(PlayerList),
@@ -101,10 +107,12 @@ func (m *Manager) MenuLobbies() []MenuLobby {
 		isOpen := pc < l.MaxPlayers
 
 		menuLobby := MenuLobby{
-			LobbyID:     l.LobbyID,
-			HostName:    l.players[l.Host].Name,
+			LobbyID: l.LobbyID,
+			// HostName:    l.players[l.Host].Name,
+			HostName:    "temp",
 			PlayerCount: pc,
 			MaxPlayers:  l.MaxPlayers,
+			CreatedAt:   l.CreatedAt,
 
 			IsOpen:    isOpen,
 			IsPlaying: l.game != nil,
@@ -112,6 +120,10 @@ func (m *Manager) MenuLobbies() []MenuLobby {
 
 		lobbies = append(lobbies, menuLobby)
 	}
+
+	sort.Slice(lobbies[:], func(i, j int) bool {
+		return lobbies[i].CreatedAt.Before(lobbies[j].CreatedAt)
+	})
 
 	return lobbies
 }
@@ -165,6 +177,7 @@ func (l *Lobby) SnapshotFor(c *Client) LobbySnapshot {
 		Host:       l.Host,
 		Players:    l.playerSnapshots(),
 		MaxPlayers: l.MaxPlayers,
+		CreatedAt:  l.CreatedAt,
 		Position:   l.players[c.UserID].Position,
 	}
 

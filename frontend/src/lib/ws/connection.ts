@@ -1,11 +1,7 @@
 import type { EventPayloads, WSEvent } from '$lib/event/events';
 import { routeEvent } from '$lib/event/routing';
-import { WEBSOCKET_URL } from '$env/static/private';
-
-export const connectionState = $state({
-	connected: false,
-	connecting: false
-});
+import { PUBLIC_WEBSOCKET_URL } from '$env/static/public';
+import { connectionState } from '$lib/state/state.svelte';
 
 let socket: WebSocket | null = null;
 
@@ -14,7 +10,7 @@ export default function connectWebsocket(): Error | null {
 	if (window['WebSocket']) {
 		connectionState.connecting = true;
 
-		socket = new WebSocket(WEBSOCKET_URL);
+		socket = new WebSocket(PUBLIC_WEBSOCKET_URL);
 
 		if (socket === null) {
 			connectionState.connecting = false;

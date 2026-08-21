@@ -1,2 +1,21 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script lang="ts">
+	import Menulobby from '$lib/components/menulobby.svelte';
+	import { createLobby } from '$lib/event/actions';
+	import { connectionState, globalState } from '$lib/state/state.svelte';
+
+	let lobbies = $derived(globalState.menu.lobbies);
+</script>
+
+{#if lobbies === null}
+	<p>No Lobbies Found</p>
+{:else}
+	{#each lobbies as lobby (lobby.lobby_id)}
+		<Menulobby {lobby} />
+	{/each}
+{/if}
+
+<button onclick={() => createLobby()} disabled={!connectionState.connected}>
+	Create a new lobby
+</button>
+
+{JSON.stringify(connectionState)}

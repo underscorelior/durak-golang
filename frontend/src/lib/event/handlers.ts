@@ -7,6 +7,10 @@ export function connectionEstablishedHandler(payload: EventPayloads[Events.Conne
 	globalState.menu.lobbies = payload.lobbies;
 }
 
+export function menuLobbiesUpdatedHandler(payload: EventPayloads[Events.MenuLobbiesUpdated]) {
+	globalState.menu.lobbies = payload.lobbies;
+}
+
 export function userUpdatedHandler(payload: EventPayloads[Events.UserUpdated]) {
 	globalState.user.name = payload.name;
 }
