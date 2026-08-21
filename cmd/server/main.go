@@ -4,15 +4,19 @@ import (
 	"durak/internal/server"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 )
 
 func main() {
+	svelteURL, _ := url.Parse("http://localhost:5173")
+	svelte := httputil.NewSingleHostReverseProxy(svelteURL)
 
 	// ctx := context.Background()
 
 	manager := server.NewManager()
 
-	http.Handle("/", http.FileServer(http.Dir("./frontend")))
+	http.Handle("/", svelte)
 	http.HandleFunc("/ws", manager.ServeWS)
 	// http.HandleFunc("/login", manager.loginHandler)
 
