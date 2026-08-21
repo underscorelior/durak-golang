@@ -1,5 +1,11 @@
 import { Events, type WSEvent } from './events';
-import { connectionEstablishedHandler } from './handlers';
+import {
+	connectionEstablishedHandler,
+	joinLobbyFailedHandler,
+	lobbyCreatedHandler,
+	lobbyJoinedHandler,
+	userUpdatedHandler
+} from './handlers';
 
 export function routeEvent(event: WSEvent) {
 	if (event.type === undefined) {
@@ -8,8 +14,24 @@ export function routeEvent(event: WSEvent) {
 	}
 
 	switch (event.type) {
-		case Events.EventConnectionEstablished: {
+		case Events.ConnectionEstablished: {
 			connectionEstablishedHandler(event.payload);
+			break;
+		}
+		case Events.UserUpdated: {
+			userUpdatedHandler(event.payload);
+			break;
+		}
+		case Events.LobbyCreated: {
+			lobbyCreatedHandler(event.payload);
+			break;
+		}
+		case Events.JoinLobbyFailed: {
+			joinLobbyFailedHandler(event.payload);
+			break;
+		}
+		case Events.LobbyJoined: {
+			lobbyJoinedHandler(event.payload);
 			break;
 		}
 	}

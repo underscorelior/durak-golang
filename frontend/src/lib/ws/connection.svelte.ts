@@ -48,7 +48,7 @@ function onConnectionMessage(event: MessageEvent<string>) {
 }
 
 export function sendEvent<E extends keyof EventPayloads>(eventName: E, payload: EventPayloads[E]) {
-	const event: WSEvent = { type: eventName, payload };
+	const event = { type: eventName, payload } as WSEvent;
 
 	const message = JSON.stringify(event);
 

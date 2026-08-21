@@ -16,7 +16,7 @@ type GlobalState = {
 	lobby: Lobby | null;
 };
 
-export const state = $state<GlobalState>({
+export const globalState = $state<GlobalState>({
 	user: {
 		name: null,
 		user_id: null
