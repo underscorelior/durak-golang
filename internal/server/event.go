@@ -28,7 +28,7 @@ const (
 )
 
 type ConnectionEstablishedEvent struct {
-	UserID  string      `json:"userId"`
+	UserID  string      `json:"user_id"`
 	Name    string      `json:"name"`
 	Lobbies []MenuLobby `json:"lobbies"`
 }
@@ -42,18 +42,18 @@ type UserUpdatedEvent struct {
 }
 
 type LobbyCreatedEvent struct {
-	LobbyID string `json:"lobbyId"`
+	LobbyID string `json:"lobby_id"`
 }
 
 // Sent by a client to the server to indicate joining.
 type JoinLobbyEvent struct {
-	LobbyID string `json:"lobbyId"`
+	LobbyID string `json:"lobby_id"`
 }
 
 type JoinLobbyFailedEvent struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
-	LobbyID string `json:"lobbyId"`
+	LobbyID string `json:"lobby_id"`
 }
 
 // Sent by server to recently joined client

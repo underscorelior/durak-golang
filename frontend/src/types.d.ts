@@ -1,32 +1,32 @@
 type Lobby = {
-	lobbyId: string;
-	hostId: string;
+	lobby_id: string;
+	host_id: string;
 	players: Player[];
-	maxPlayers: number;
-	gameState: GameState;
+	max_players: number;
+	game_state: GameState;
 };
 
 type MenuLobby = {
-	lobbyId: string;
-	hostName: string;
-	playerCount: number;
-	maxPlayers: number;
+	lobby_id: string;
+	host_name: string;
+	player_count: number;
+	max_players: number;
 
-	isOpen: boolean;
-	isPlaying: boolean;
+	is_open: boolean;
+	is_playing: boolean;
 };
 
 type GameState = {
 	// TODO: Combine both the lobby players and the game state players locally
-	players: { userId: string; handSize: number };
+	players: { user_id: string; hand_size: number };
 	hand: Card[];
 	trump: Card;
-	deckSize: number;
+	deck_size: number;
 	turn: Turn;
 };
 
 type Player = {
-	userId: string;
+	user_id: string;
 	name: string;
 	position: string;
 };
@@ -44,15 +44,15 @@ type Card = {
 };
 
 type CardPair = {
-	attackCard: Card;
-	defenseCard: Card;
-	isDefended: boolean;
+	attack_card: Card;
+	defense_card: Card;
+	is_defended: boolean;
 };
 
 type Turn = {
-	tableState: CardPair[];
-	defenderId: string;
-	initialAttackerId: string;
+	table_state: CardPair[];
+	defender_id: string;
+	initial_attacker_id: string;
 	// attackerIds: string[];
 	phase: TurnPhase;
 };

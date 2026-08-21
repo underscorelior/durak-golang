@@ -1,9 +1,9 @@
 package game
 
 type Turn struct {
-	TableState        []CardPair `json:"tableState"`
-	DefenderID        string     `json:"defenderId"` // Is this the best pattern?
-	InitialAttackerID string     `json:"initialAttackerId"`
+	TableState        []CardPair `json:"table_state"`
+	DefenderID        string     `json:"defender_id"` // Is this the best pattern?
+	InitialAttackerID string     `json:"initial_attacker_id"`
 
 	AttackerIDs map[string]struct{} // Figure out how to do this, i doubt this is a good pattern
 	Phase       TurnPhase           `json:"phase"`

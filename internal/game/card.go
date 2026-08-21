@@ -49,7 +49,7 @@ type Card struct {
 
 // TODO: Dfiferentiate card by user who played it
 type CardPair struct {
-	AttackCard  Card  `json:"attackCard"`
-	DefenseCard *Card `json:"defenseCard,omitempty"`
-	IsDefended  bool  `json:"isDefended"`
+	AttackCard  Card  `json:"attack_card"`
+	DefenseCard *Card `json:"defense_card,omitempty"`
+	IsDefended  bool  `json:"is_defended"`
 }

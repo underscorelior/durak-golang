@@ -10,7 +10,7 @@ import (
 type PlayerList map[string]*Player // UserID -> Player
 type Player struct {
 	Name     string `json:"name"`
-	UserID   string `json:"userId"`
+	UserID   string `json:"user_id"`
 	Position int    `json:"position"`
 }
 
@@ -32,25 +32,25 @@ type Lobby struct {
 }
 
 type LobbySnapshot struct {
-	LobbyID    string `json:"lobbyId"`
-	Host       string `json:"hostId"`
-	IsPrivate  bool   `json:"isPrivate"`
-	MaxPlayers int    `json:"maxPlayers"`
+	LobbyID    string `json:"lobby_id"`
+	Host       string `json:"host_id"`
+	IsPrivate  bool   `json:"is_private"`
+	MaxPlayers int    `json:"max_players"`
 
 	Players []Player `json:"players"`
 
 	Position  int                     `json:"position"`
-	GameState *game.GameStateSnapshot `json:"gameState,omitempty"`
+	GameState *game.GameStateSnapshot `json:"game_state,omitempty"`
 }
 
 type MenuLobby struct {
-	LobbyID     string `json:"lobbyId"`
-	HostName    string `json:"hostName"`
-	PlayerCount int    `json:"playerCount"`
-	MaxPlayers  int    `json:"maxPlayers"`
+	LobbyID     string `json:"lobby_id"`
+	HostName    string `json:"host_name"`
+	PlayerCount int    `json:"player_count"`
+	MaxPlayers  int    `json:"max_players"`
 
-	IsOpen    bool `json:"isOpen"`
-	IsPlaying bool `json:"isPlaying"`
+	IsOpen    bool `json:"is_open"`
+	IsPlaying bool `json:"is_playing"`
 }
 
 func (m *Manager) NewLobby(userID string) *Lobby {
