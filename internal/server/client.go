@@ -83,7 +83,7 @@ func (c *Client) writeMessages() {
 	}()
 
 	pongTicker := time.NewTicker(pingInterval)
-	menuLobbyUpdateTicker := time.NewTicker(menuLobbiesUpdatedInterval)
+	lobbyPreviewUpdateTicker := time.NewTicker(menuLobbiesUpdatedInterval)
 
 	for {
 		select {
@@ -107,7 +107,7 @@ func (c *Client) writeMessages() {
 			}
 			// fmt.Println(c.Name, "- Ping")
 
-		case <-menuLobbyUpdateTicker.C:
+		case <-lobbyPreviewUpdateTicker.C:
 			event, err := c.menuLobbiesUpdatedHandler()
 			if err != nil {
 				log.Println("Error in sending MenuLobbiesUpdated event")
@@ -144,12 +144,10 @@ func (c *Client) menuLobbiesUpdatedHandler() (*Event, error) {
 	if c.lobby != nil {
 		return nil, nil
 	}
-	log.Println("INSIDE OF MENU LOBBY UPDATED HANDLER")
 
 	var menuLobbiesUpdatedMsg MenuLobbiesUpdatedEvent
 
 	menuLobbiesUpdatedMsg.Lobbies = c.manager.MenuLobbies()
-	log.Println("INSIDE OF MENU LOBBY UPDATED HANDLER, 2")
 
 	data, err := json.Marshal(menuLobbiesUpdatedMsg)
 	if err != nil {

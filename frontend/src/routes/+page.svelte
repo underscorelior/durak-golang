@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Menulobby from '$lib/components/menulobby.svelte';
+	import LobbyPreview from '$lib/components/lobbypreview.svelte';
 	import { createLobby } from '$lib/event/actions';
 	import { connectionState, globalState } from '$lib/state/state.svelte';
 
@@ -10,7 +10,7 @@
 	<p>No Lobbies Found</p>
 {:else}
 	{#each lobbies as lobby (lobby.lobby_id)}
-		<Menulobby {lobby} />
+		<LobbyPreview {lobby} />
 	{/each}
 {/if}
 

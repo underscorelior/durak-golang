@@ -47,7 +47,7 @@ type LobbySnapshot struct {
 	GameState *game.GameStateSnapshot `json:"game_state,omitempty"`
 }
 
-type MenuLobby struct {
+type LobbyPreview struct {
 	LobbyID     string    `json:"lobby_id"`
 	HostName    string    `json:"host_name"`
 	PlayerCount int       `json:"player_count"`
@@ -92,8 +92,8 @@ func (m *Manager) removeLobby(lobby *Lobby) {
 	// }
 }
 
-func (m *Manager) MenuLobbies() []MenuLobby {
-	var lobbies []MenuLobby
+func (m *Manager) MenuLobbies() []LobbyPreview {
+	var lobbies []LobbyPreview
 
 	for lobbyID := range m.lobbies {
 		l := m.lobbies[lobbyID]
@@ -106,7 +106,7 @@ func (m *Manager) MenuLobbies() []MenuLobby {
 		// TODO: Find a better definition of "isOpen"
 		isOpen := pc < l.MaxPlayers
 
-		menuLobby := MenuLobby{
+		lobbyPreview := LobbyPreview{
 			LobbyID: l.LobbyID,
 			// HostName:    l.players[l.Host].Name,
 			HostName:    "temp",
@@ -118,7 +118,7 @@ func (m *Manager) MenuLobbies() []MenuLobby {
 			IsPlaying: l.game != nil,
 		}
 
-		lobbies = append(lobbies, menuLobby)
+		lobbies = append(lobbies, lobbyPreview)
 	}
 
 	sort.Slice(lobbies[:], func(i, j int) bool {

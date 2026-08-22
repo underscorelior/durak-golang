@@ -29,13 +29,13 @@ const (
 )
 
 type ConnectionEstablishedEvent struct {
-	UserID  string      `json:"user_id"`
-	Name    string      `json:"name"`
-	Lobbies []MenuLobby `json:"lobbies"`
+	UserID  string         `json:"user_id"`
+	Name    string         `json:"name"`
+	Lobbies []LobbyPreview `json:"lobbies"`
 }
 
 type MenuLobbiesUpdatedEvent struct {
-	Lobbies []MenuLobby `json:"lobbies"`
+	Lobbies []LobbyPreview `json:"lobbies"`
 }
 
 type UpdateUserEvent struct {

@@ -4,7 +4,7 @@ type GlobalState = {
 		user_id: string | null;
 	};
 	menu: {
-		lobbies: MenuLobby[] | null;
+		lobbies: LobbyPreview[] | null;
 		connection: {
 			connecting: boolean;
 			connected: boolean;

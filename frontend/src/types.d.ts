@@ -7,7 +7,7 @@ type Lobby = {
 	game_state: GameState | null;
 };
 
-type MenuLobby = {
+type LobbyPreview = {
 	lobby_id: string;
 	host_name: string;
 	player_count: number;

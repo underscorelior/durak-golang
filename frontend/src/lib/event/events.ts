@@ -18,11 +18,11 @@ export enum Events {
 type ConnectionEstablishedPayload = {
 	name: string;
 	user_id: string;
-	lobbies: MenuLobby[];
+	lobbies: LobbyPreview[];
 };
 
 type MenuLobbiesUpdatedPayload = {
-	lobbies: MenuLobby[];
+	lobbies: LobbyPreview[];
 };
 
 type UpdateUserPayload = {
