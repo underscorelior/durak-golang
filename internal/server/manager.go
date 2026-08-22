@@ -43,6 +43,7 @@ func (m *Manager) setupEventHandlers() {
 	m.handlers[EventUpdateUser] = UpdateUser
 	m.handlers[EventCreateLobby] = CreateLobby
 	m.handlers[EventJoinLobby] = JoinLobby
+	m.handlers[EventLeaveLobby] = LeaveLobby
 	m.handlers[EventStartGame] = StartGame
 }
 

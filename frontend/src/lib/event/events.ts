@@ -10,6 +10,7 @@ export enum Events {
 	LobbyJoined = 'lobby_joined',
 	PlayerJoined = 'player_joined',
 	LeaveLobby = 'leave_lobby',
+	LobbyLeft = 'lobby_left',
 	PlayerLeft = 'player_left',
 	StartGame = 'start_game',
 	GameStarted = 'game_started'
@@ -49,8 +50,22 @@ type JoinLobbyFailedPayload = {
 	message: string;
 };
 
-type LobbyJoinedEvent = {
+type LobbyJoinedPayload = {
 	lobby: Lobby;
+};
+
+type PlayerJoinedPayload = {
+	player: Player;
+};
+
+type LeaveLobbyPayload = object;
+
+type LobbyLeftPayload = {
+	lobbies: LobbyPreview[];
+};
+
+type PlayerLeftPayload = {
+	user_id: string;
 };
 
 export type EventPayloads = {
@@ -62,7 +77,11 @@ export type EventPayloads = {
 	[Events.LobbyCreated]: LobbyCreatedPayload;
 	[Events.JoinLobby]: JoinLobbyPayload;
 	[Events.JoinLobbyFailed]: JoinLobbyFailedPayload;
-	[Events.LobbyJoined]: LobbyJoinedEvent;
+	[Events.LobbyJoined]: LobbyJoinedPayload;
+	[Events.PlayerJoined]: PlayerJoinedPayload;
+	[Events.LeaveLobby]: LeaveLobbyPayload;
+	[Events.LobbyLeft]: LobbyLeftPayload;
+	[Events.PlayerLeft]: PlayerLeftPayload;
 };
 
 export type WSEvent = {

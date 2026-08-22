@@ -126,7 +126,7 @@ func JoinLobby(event Event, c *Client) error {
 
 	broadcastData, err := json.Marshal(playerJoinedMsg)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal lobby joined message: %v", err)
+		return fmt.Errorf("Failed to marshal player joined message: %v", err)
 	}
 
 	playerJoined := Event{
@@ -158,6 +158,50 @@ func createLobbyFailedEvent(lobbyCode, code, message string) (Event, error) {
 		Payload: data,
 		Type:    EventJoinLobbyFailed,
 	}, nil
+}
+
+func LeaveLobby(event Event, c *Client) error {
+	lobby := c.lobby
+
+	lobby.removeClient(c)
+
+	var lobbyLeftMsg LobbyLeftEvent
+
+	lobbyLeftMsg.Lobbies = c.manager.MenuLobbies()
+
+	data, err := json.Marshal(lobbyLeftMsg)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal lobby left message: %v", err)
+	}
+
+	lobbyLeft := Event{
+		Payload: data,
+		Type:    EventLobbyLeft,
+	}
+
+	c.egress <- lobbyLeft
+
+	var playerLeftMsg PlayerLeftEvent
+
+	playerLeftMsg.UserID = c.UserID
+
+	broadcastData, err := json.Marshal(playerLeftMsg)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal player left message: %v", err)
+	}
+
+	playerJoined := Event{
+		Payload: broadcastData,
+		Type:    EventPlayerLeft,
+	}
+
+	ignored := ClientList{
+		c.UserID: c,
+	}
+	lobby.broadcast(playerJoined, ignored)
+
+	return nil
+
 }
 
 func StartGame(event Event, c *Client) error {

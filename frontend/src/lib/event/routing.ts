@@ -4,7 +4,10 @@ import {
 	joinLobbyFailedHandler,
 	lobbyCreatedHandler,
 	lobbyJoinedHandler,
+	lobbyLeftHandler,
 	menuLobbiesUpdatedHandler,
+	playerJoinedHandler,
+	playerLeftHandler,
 	userUpdatedHandler
 } from './handlers';
 
@@ -37,6 +40,18 @@ export function routeEvent(event: WSEvent) {
 		}
 		case Events.LobbyJoined: {
 			lobbyJoinedHandler(event.payload);
+			break;
+		}
+		case Events.PlayerJoined: {
+			playerJoinedHandler(event.payload);
+			break;
+		}
+		case Events.LobbyLeft: {
+			lobbyLeftHandler(event.payload);
+			break;
+		}
+		case Events.PlayerLeft: {
+			playerLeftHandler(event.payload);
 			break;
 		}
 	}

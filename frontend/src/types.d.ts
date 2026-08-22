@@ -30,7 +30,7 @@ type GameState = {
 type Player = {
 	user_id: string;
 	name: string;
-	position: string;
+	position: number;
 };
 
 enum Suit {

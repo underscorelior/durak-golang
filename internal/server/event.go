@@ -23,6 +23,7 @@ const (
 	EventLobbyJoined           = "lobby_joined"
 	EventPlayerJoined          = "player_joined"
 	EventLeaveLobby            = "leave_lobby"
+	EventLobbyLeft             = "lobby_left"
 	EventPlayerLeft            = "player_left"
 	EventStartGame             = "start_game"
 	EventGameStarted           = "game_started"
@@ -68,6 +69,14 @@ type LobbyJoinedEvent struct {
 
 type PlayerJoinedEvent struct {
 	Player Player `json:"player"`
+}
+
+type LobbyLeftEvent struct {
+	Lobbies []LobbyPreview `json:"lobbies"` // TODO: Maybe this isnt needed
+}
+
+type PlayerLeftEvent struct {
+	UserID string `json:"user_id"`
 }
 
 type GameStartedEvent struct {

@@ -140,6 +140,8 @@ func (l *Lobby) removeClient(c *Client) {
 	l.Lock()
 	defer l.Unlock()
 
+	l.freePosition(l.players[c.UserID].Position)
+
 	delete(l.clients, c.UserID)
 	delete(l.players, c.UserID)
 }
@@ -152,6 +154,10 @@ func (l *Lobby) nextAvailablePosition() int {
 	}
 
 	return -1
+}
+
+func (l *Lobby) freePosition(pos int) {
+	l.positions[pos] = false
 }
 
 func (l *Lobby) usePosition(pos int) int {
