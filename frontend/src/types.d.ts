@@ -1,5 +1,5 @@
 type Lobby = {
-	lobby_id: string;
+	lobby_code: string;
 	host_id: string;
 	players: Player[];
 	max_players: number;
@@ -8,7 +8,7 @@ type Lobby = {
 };
 
 type LobbyPreview = {
-	lobby_id: string;
+	lobby_code: string;
 	host_name: string;
 	player_count: number;
 	max_players: number;

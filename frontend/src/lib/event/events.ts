@@ -36,15 +36,15 @@ type UserUpdatedPayload = {
 type CreateLobbyPayload = object;
 
 type LobbyCreatedPayload = {
-	lobby_id: string;
+	lobby_code: string;
 };
 
 type JoinLobbyPayload = {
-	lobby_id: string;
+	lobby_code: string;
 };
 
 type JoinLobbyFailedPayload = {
-	lobby_id: string;
+	lobby_code: string;
 	code: string;
 	message: string;
 };

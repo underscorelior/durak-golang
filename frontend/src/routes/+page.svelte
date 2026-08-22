@@ -9,7 +9,7 @@
 {#if lobbies === null}
 	<p>No Lobbies Found</p>
 {:else}
-	{#each lobbies as lobby (lobby.lobby_id)}
+	{#each lobbies as lobby (lobby.lobby_code)}
 		<LobbyPreview {lobby} />
 	{/each}
 {/if}

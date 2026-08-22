@@ -2,11 +2,11 @@ package server
 
 import (
 	"durak/internal/game"
+	"math/rand/v2"
 	"sort"
+	"strings"
 	"sync"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type PlayerList map[string]*Player // UserID -> Player
@@ -16,9 +16,9 @@ type Player struct {
 	Position int    `json:"position"`
 }
 
-type LobbyList map[string]*Lobby // LobbyID -> Lobby
+type LobbyList map[string]*Lobby // LobbyCode -> Lobby
 type Lobby struct {
-	LobbyID string
+	LobbyCode string
 	sync.RWMutex
 
 	MaxPlayers int
@@ -35,7 +35,7 @@ type Lobby struct {
 }
 
 type LobbySnapshot struct {
-	LobbyID    string    `json:"lobby_id"`
+	LobbyCode  string    `json:"lobby_code"`
 	Host       string    `json:"host_id"`
 	IsPrivate  bool      `json:"is_private"`
 	MaxPlayers int       `json:"max_players"`
@@ -48,7 +48,7 @@ type LobbySnapshot struct {
 }
 
 type LobbyPreview struct {
-	LobbyID     string    `json:"lobby_id"`
+	LobbyCode   string    `json:"lobby_code"`
 	HostName    string    `json:"host_name"`
 	PlayerCount int       `json:"player_count"`
 	MaxPlayers  int       `json:"max_players"`
@@ -60,7 +60,7 @@ type LobbyPreview struct {
 
 func (m *Manager) NewLobby(userID string) *Lobby {
 	l := &Lobby{
-		LobbyID:    uuid.NewString(),
+		LobbyCode:  m.GenerateLobbyCode(5),
 		MaxPlayers: 4,
 		IsPrivate:  false,
 		Host:       userID,
@@ -79,24 +79,24 @@ func (m *Manager) addLobby(lobby *Lobby) {
 	m.Lock()
 	defer m.Unlock()
 
-	m.lobbies[lobby.LobbyID] = lobby
+	m.lobbies[lobby.LobbyCode] = lobby
 }
 
 func (m *Manager) removeLobby(lobby *Lobby) {
 	m.Lock()
 	defer m.Unlock()
 
-	// if _, ok := m.lobbies[lobby.LobbyID]; ok {
+	// if _, ok := m.lobbies[lobby.LobbyCode]; ok {
 	// Handle some sort of lobby deletion (DB stuff)
-	delete(m.lobbies, lobby.LobbyID)
+	delete(m.lobbies, lobby.LobbyCode)
 	// }
 }
 
 func (m *Manager) MenuLobbies() []LobbyPreview {
 	var lobbies []LobbyPreview
 
-	for lobbyID := range m.lobbies {
-		l := m.lobbies[lobbyID]
+	for lobbyCode := range m.lobbies {
+		l := m.lobbies[lobbyCode]
 		if l.IsPrivate {
 			continue
 		}
@@ -107,7 +107,7 @@ func (m *Manager) MenuLobbies() []LobbyPreview {
 		isOpen := pc < l.MaxPlayers
 
 		lobbyPreview := LobbyPreview{
-			LobbyID: l.LobbyID,
+			LobbyCode: l.LobbyCode,
 			// HostName:    l.players[l.Host].Name,
 			HostName:    "temp",
 			PlayerCount: pc,
@@ -161,7 +161,7 @@ func (l *Lobby) usePosition(pos int) int {
 
 func (l *Lobby) Snapshot() LobbySnapshot {
 	snapshot := LobbySnapshot{
-		LobbyID:    l.LobbyID,
+		LobbyCode:  l.LobbyCode,
 		Host:       l.Host,
 		Players:    l.playerSnapshots(),
 		MaxPlayers: l.MaxPlayers,
@@ -173,7 +173,7 @@ func (l *Lobby) Snapshot() LobbySnapshot {
 
 func (l *Lobby) SnapshotFor(c *Client) LobbySnapshot {
 	snapshot := LobbySnapshot{
-		LobbyID:    l.LobbyID,
+		LobbyCode:  l.LobbyCode,
 		Host:       l.Host,
 		Players:    l.playerSnapshots(),
 		MaxPlayers: l.MaxPlayers,
@@ -204,4 +204,19 @@ func (l *Lobby) broadcast(event Event, ignored ClientList) {
 		}
 		client.egress <- event
 	}
+}
+
+func (m *Manager) GenerateLobbyCode(length int) string {
+	charset := strings.Split("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "")
+
+	var code string
+
+	for ok := true; ok; _, ok = m.lobbies[code] {
+		code = ""
+		for range length {
+			code += charset[rand.IntN(len(charset))]
+		}
+	}
+
+	return code
 }

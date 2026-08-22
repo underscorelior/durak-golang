@@ -42,7 +42,7 @@ func CreateLobby(event Event, c *Client) error {
 
 	var lobbyCreatedMsg LobbyCreatedEvent
 
-	lobbyCreatedMsg.LobbyID = lobby.LobbyID
+	lobbyCreatedMsg.LobbyCode = lobby.LobbyCode
 
 	data, err := json.Marshal(lobbyCreatedMsg)
 	if err != nil {
@@ -65,14 +65,14 @@ func JoinLobby(event Event, c *Client) error {
 		return fmt.Errorf("Bad payload in request: %v", err)
 	}
 
-	if c.lobby != nil && joinLobbyEvent.LobbyID == c.lobby.LobbyID {
+	if c.lobby != nil && joinLobbyEvent.LobbyCode == c.lobby.LobbyCode {
 		return nil // How else should I handle this?
 	}
 
-	lobby, ok := c.manager.lobbies[joinLobbyEvent.LobbyID]
+	lobby, ok := c.manager.lobbies[joinLobbyEvent.LobbyCode]
 
 	if !ok {
-		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyID, "lobby_not_found", "Lobby does not exist")
+		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_not_found", "Lobby does not exist")
 
 		if err != nil {
 			return err
@@ -83,7 +83,7 @@ func JoinLobby(event Event, c *Client) error {
 	}
 
 	if len(lobby.clients) >= int(lobby.MaxPlayers) {
-		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyID, "lobby_full", fmt.Sprintf("Lobby is full (Max %v)", lobby.MaxPlayers))
+		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_full", fmt.Sprintf("Lobby is full (Max %v)", lobby.MaxPlayers))
 
 		if err != nil {
 			return err
@@ -142,12 +142,12 @@ func JoinLobby(event Event, c *Client) error {
 	return nil
 }
 
-func createLobbyFailedEvent(lobbyID, code, message string) (Event, error) {
+func createLobbyFailedEvent(lobbyCode, code, message string) (Event, error) {
 	var joinLobbyFailedMsg JoinLobbyFailedEvent
 
 	joinLobbyFailedMsg.Code = code
 	joinLobbyFailedMsg.Message = message
-	joinLobbyFailedMsg.LobbyID = lobbyID
+	joinLobbyFailedMsg.LobbyCode = lobbyCode
 
 	data, err := json.Marshal(joinLobbyFailedMsg)
 	if err != nil {

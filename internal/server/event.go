@@ -47,18 +47,18 @@ type UserUpdatedEvent struct {
 }
 
 type LobbyCreatedEvent struct {
-	LobbyID string `json:"lobby_id"`
+	LobbyCode string `json:"lobby_code"`
 }
 
 // Sent by a client to the server to indicate joining.
 type JoinLobbyEvent struct {
-	LobbyID string `json:"lobby_id"`
+	LobbyCode string `json:"lobby_code"`
 }
 
 type JoinLobbyFailedEvent struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	LobbyID string `json:"lobby_id"`
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	LobbyCode string `json:"lobby_code"`
 }
 
 // Sent by server to recently joined client
