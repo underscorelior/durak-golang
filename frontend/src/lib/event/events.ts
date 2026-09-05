@@ -12,14 +12,26 @@ export enum Events {
 	LeaveLobby = 'leave_lobby',
 	LobbyLeft = 'lobby_left',
 	PlayerLeft = 'player_left',
+	PlayerDisconnected = 'player_disconnected',
+	RejoinLobby = 'rejoin_lobby',
+	RejoinLobbyFailed = 'rejoin_lobby_failed',
+	LobbyRejoined = 'lobby_rejoined',
+	PlayerRejoined = 'player_rejoined',
 	StartGame = 'start_game',
 	GameStarted = 'game_started'
 }
+
+type LobbyFailedEvent = {
+	lobby_code: string;
+	code: string;
+	message: string;
+};
 
 type ConnectionEstablishedPayload = {
 	name: string;
 	user_id: string;
 	lobbies: LobbyPreview[];
+	is_rejoining: boolean;
 };
 
 type MenuLobbiesUpdatedPayload = {
@@ -44,11 +56,7 @@ type JoinLobbyPayload = {
 	lobby_code: string;
 };
 
-type JoinLobbyFailedPayload = {
-	lobby_code: string;
-	code: string;
-	message: string;
-};
+type JoinLobbyFailedPayload = LobbyFailedEvent;
 
 type LobbyJoinedPayload = {
 	lobby: Lobby;
@@ -66,6 +74,26 @@ type LobbyLeftPayload = {
 
 type PlayerLeftPayload = {
 	user_id: string;
+	host_id: string;
+};
+
+type PlayerDisconnectedPayload = {
+	user_id: string;
+};
+
+type RejoinLobbyPayload = {
+	lobby_code: string;
+	session_token: string;
+};
+
+type RejoinLobbyFailedPayload = LobbyFailedEvent;
+
+type LobbyRejoinedPayload = {
+	lobby: Lobby;
+};
+
+type PlayerRejoinedPayload = {
+	user_id: string;
 };
 
 export type EventPayloads = {
@@ -82,6 +110,11 @@ export type EventPayloads = {
 	[Events.LeaveLobby]: LeaveLobbyPayload;
 	[Events.LobbyLeft]: LobbyLeftPayload;
 	[Events.PlayerLeft]: PlayerLeftPayload;
+	[Events.PlayerDisconnected]: PlayerDisconnectedPayload;
+	[Events.RejoinLobby]: RejoinLobbyPayload;
+	[Events.RejoinLobbyFailed]: RejoinLobbyFailedPayload;
+	[Events.LobbyRejoined]: LobbyRejoinedPayload;
+	[Events.PlayerRejoined]: PlayerRejoinedPayload;
 };
 
 export type WSEvent = {

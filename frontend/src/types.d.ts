@@ -1,9 +1,11 @@
 type Lobby = {
 	lobby_code: string;
 	host_id: string;
-	players: Player[];
+	is_private: boolean;
 	max_players: number;
 	created_at: string;
+	players: Player[];
+	position: number;
 	game_state: GameState | null;
 };
 
@@ -16,6 +18,11 @@ type LobbyPreview = {
 
 	is_open: boolean;
 	is_playing: boolean;
+};
+
+type Session = {
+	lobby_code: string;
+	session_token: string;
 };
 
 type GameState = {
@@ -31,6 +38,10 @@ type Player = {
 	user_id: string;
 	name: string;
 	position: number;
+	is_connected: boolean;
+
+	joined_at: Date;
+	disconnected_at: Date | null;
 };
 
 enum Suit {

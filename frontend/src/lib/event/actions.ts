@@ -11,6 +11,12 @@ export function joinLobby(lobby_code: string) {
 	sendEvent(Events.JoinLobby, joinLobby);
 }
 
+export function rejoinLobby(session: Session) {
+	const rejoinLobby = { ...session } as EventPayloads[Events.RejoinLobby];
+
+	sendEvent(Events.RejoinLobby, rejoinLobby);
+}
+
 export function leaveLobby() {
 	sendEvent(Events.LeaveLobby, {});
 }

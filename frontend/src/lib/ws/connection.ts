@@ -1,16 +1,22 @@
 import type { EventPayloads, WSEvent } from '$lib/event/events';
 import { routeEvent } from '$lib/event/routing';
 import { PUBLIC_WEBSOCKET_URL } from '$env/static/public';
-import { connectionState } from '$lib/state/state.svelte';
+import { connectionState, globalState } from '$lib/state/state.svelte';
 
 let socket: WebSocket | null = null;
 
 export default function connectWebsocket(): Error | null {
 	if (socket) return null;
 	if (window['WebSocket']) {
+		const session = localStorage.getItem('session');
+		const parsedSession = JSON.parse(session || '{}') as Session;
+		if (session && parsedSession.lobby_code && parsedSession.session_token) {
+			globalState.session = parsedSession;
+		}
+
 		connectionState.connecting = true;
 
-		socket = new WebSocket(PUBLIC_WEBSOCKET_URL);
+		socket = new WebSocket(PUBLIC_WEBSOCKET_URL + (session !== null ? `?session=${session}` : ''));
 
 		if (socket === null) {
 			connectionState.connecting = false;

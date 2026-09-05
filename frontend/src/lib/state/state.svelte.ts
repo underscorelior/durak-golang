@@ -12,6 +12,7 @@ type GlobalState = {
 	};
 	game: GameState | null;
 	lobby: Lobby | null;
+	session: Session | null;
 };
 
 export const connectionState = $state<GlobalState['menu']['connection']>({
@@ -29,5 +30,6 @@ export const globalState = $state<GlobalState>({
 		connection: connectionState
 	},
 	game: null,
-	lobby: null
+	lobby: null,
+	session: null
 });
