@@ -2,18 +2,30 @@ package server
 
 import (
 	"durak/internal/game"
+	"encoding/json"
+	"fmt"
+	"log"
+	"maps"
 	"math/rand/v2"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type PlayerList map[string]*Player // UserID -> Player
 type Player struct {
-	Name     string `json:"name"`
-	UserID   string `json:"user_id"`
-	Position int    `json:"position"`
+	Name        string `json:"name"`
+	UserID      string `json:"user_id"`
+	Position    int    `json:"position"`
+	IsConnected bool   `json:"is_connected"`
+
+	sessionToken   SessionToken
+	JoinedAt       time.Time `json:"joined_at"`
+	DisconnectedAt time.Time `json:"disconnected_at,omitempty"`
 }
 
 type LobbyList map[string]*Lobby // LobbyCode -> Lobby
@@ -23,20 +35,22 @@ type Lobby struct {
 
 	MaxPlayers int
 	IsPrivate  bool
+	IsPlaying  bool
 	positions  []bool
 	CreatedAt  time.Time
 
-	Host    string
-	clients ClientList
-	players PlayerList
-	game    *game.Game
+	HostID   string
+	sessions map[string]string // SessionToken -> UserID
+	clients  ClientList
+	players  PlayerList
+	game     *game.Game
 
 	manager *Manager
 }
 
 type LobbySnapshot struct {
 	LobbyCode  string    `json:"lobby_code"`
-	Host       string    `json:"host_id"`
+	HostID     string    `json:"host_id"`
 	IsPrivate  bool      `json:"is_private"`
 	MaxPlayers int       `json:"max_players"`
 	CreatedAt  time.Time `json:"created_at"`
@@ -58,12 +72,18 @@ type LobbyPreview struct {
 	IsPlaying bool `json:"is_playing"`
 }
 
+type SessionToken struct {
+	LobbyCode string `json:"lobby_code"`
+	Token     string `json:"token"`
+}
+
 func (m *Manager) NewLobby(userID string) *Lobby {
 	l := &Lobby{
 		LobbyCode:  m.GenerateLobbyCode(5),
 		MaxPlayers: 4,
 		IsPrivate:  false,
-		Host:       userID,
+		IsPlaying:  false,
+		HostID:     userID,
 		CreatedAt:  time.Now(),
 
 		clients:   make(ClientList),
@@ -106,16 +126,22 @@ func (m *Manager) MenuLobbies() []LobbyPreview {
 		// TODO: Find a better definition of "isOpen"
 		isOpen := pc < l.MaxPlayers
 
+		host, ok := l.players[l.HostID]
+		hostName := "N/A"
+
+		if ok {
+			hostName = host.Name
+		}
+
 		lobbyPreview := LobbyPreview{
-			LobbyCode: l.LobbyCode,
-			// HostName:    l.players[l.Host].Name,
-			HostName:    "temp",
+			LobbyCode:   l.LobbyCode,
+			HostName:    hostName,
 			PlayerCount: pc,
 			MaxPlayers:  l.MaxPlayers,
 			CreatedAt:   l.CreatedAt,
 
 			IsOpen:    isOpen,
-			IsPlaying: l.game != nil,
+			IsPlaying: l.IsPlaying,
 		}
 
 		lobbies = append(lobbies, lobbyPreview)
@@ -136,14 +162,90 @@ func (l *Lobby) addClient(c *Client, p *Player) {
 	l.players[c.UserID] = p
 }
 
-func (l *Lobby) removeClient(c *Client) {
+func (l *Lobby) removeClient(c *Client) error {
 	l.Lock()
 	defer l.Unlock()
 
-	l.freePosition(l.players[c.UserID].Position)
+	p := l.players[c.UserID]
+	if p == nil {
+		return fmt.Errorf("(removeClient) Cannot find player with UserID: %s", c.UserID)
+	}
+
+	if !l.IsPlaying {
+		l.freePosition(p.Position)
+
+		c.lobby = nil
+
+		// If host disconnects, give host to the next most recent player (that is connected.)
+		if c.UserID == l.HostID {
+			ps := slices.Collect(maps.Values(l.players))
+
+			sort.Slice(ps[:], func(i, j int) bool {
+				return ps[i].JoinedAt.Before(ps[j].JoinedAt)
+			})
+
+			fmt.Println(ps)
+
+			for pl := range ps {
+				player := ps[pl]
+				if player.UserID != l.HostID && player.IsConnected {
+					l.HostID = player.UserID
+					break
+				}
+			}
+		}
+
+		delete(l.clients, c.UserID)
+		delete(l.players, c.UserID)
+
+		// TODO: Technically, if a player presses leave, then they leave. If they dont, then they are disconnected.
+		var playerLeftMsg PlayerLeftEvent
+
+		playerLeftMsg.UserID = c.UserID
+		playerLeftMsg.HostID = l.HostID
+
+		broadcastData, err := json.Marshal(playerLeftMsg)
+		if err != nil {
+			return fmt.Errorf("Failed to marshal player left message: %v", err)
+		}
+
+		playerLeft := Event{
+			Payload: broadcastData,
+			Type:    EventPlayerLeft,
+		}
+
+		ignored := ClientList{
+			c.UserID: c,
+		}
+		l.broadcast(playerLeft, ignored)
+
+		return nil
+	}
 
 	delete(l.clients, c.UserID)
-	delete(l.players, c.UserID)
+
+	p.DisconnectedAt = time.Now()
+	p.IsConnected = false
+
+	var playerDisconnectedMsg PlayerDisconnectedEvent
+
+	playerDisconnectedMsg.DisconnectedAt = p.DisconnectedAt
+	playerDisconnectedMsg.UserID = p.UserID
+
+	data, err := json.Marshal(playerDisconnectedMsg)
+	if err != nil {
+		log.Printf("Failed to marshal PlayerDisconnected message: %v", err)
+		return nil
+	}
+
+	playerDisconnected := Event{
+		Payload: data,
+		Type:    EventPlayerDisconnected,
+	}
+
+	l.broadcast(playerDisconnected, make(ClientList))
+
+	return nil
 }
 
 func (l *Lobby) nextAvailablePosition() int {
@@ -168,24 +270,19 @@ func (l *Lobby) usePosition(pos int) int {
 func (l *Lobby) Snapshot() LobbySnapshot {
 	snapshot := LobbySnapshot{
 		LobbyCode:  l.LobbyCode,
-		Host:       l.Host,
+		HostID:     l.HostID,
 		Players:    l.playerSnapshots(),
 		MaxPlayers: l.MaxPlayers,
-		Position:   -1,
+		CreatedAt:  l.CreatedAt,
 	}
 
 	return snapshot
 }
 
 func (l *Lobby) SnapshotFor(c *Client) LobbySnapshot {
-	snapshot := LobbySnapshot{
-		LobbyCode:  l.LobbyCode,
-		Host:       l.Host,
-		Players:    l.playerSnapshots(),
-		MaxPlayers: l.MaxPlayers,
-		CreatedAt:  l.CreatedAt,
-		Position:   l.players[c.UserID].Position,
-	}
+
+	snapshot := l.Snapshot()
+	snapshot.Position = l.players[c.UserID].Position
 
 	if l.game != nil {
 		snapshot.GameState = l.game.StateFor(c.UserID)
@@ -225,4 +322,19 @@ func (m *Manager) GenerateLobbyCode(length int) string {
 	}
 
 	return code
+}
+
+func (l *Lobby) GenerateSessionTokens() {
+	l.sessions = make(map[string]string)
+
+	for _, player := range l.players {
+		sessionToken := SessionToken{
+			LobbyCode: l.LobbyCode,
+			Token:     uuid.NewString(),
+		}
+
+		player.sessionToken = sessionToken
+		l.sessions[player.UserID] = sessionToken.Token
+	}
+
 }

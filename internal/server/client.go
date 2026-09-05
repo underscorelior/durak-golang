@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -105,7 +106,7 @@ func (c *Client) writeMessages() {
 				log.Println("Error in sending ping: ", err)
 				return
 			}
-			// fmt.Println(c.Name, "- Ping")
+			fmt.Println(c.Name, "- Ping")
 
 		case <-lobbyPreviewUpdateTicker.C:
 			event, err := c.menuLobbiesUpdatedHandler()
@@ -136,7 +137,7 @@ func (c *Client) writeEvent(event Event) error {
 }
 
 func (c *Client) pongHandler(pongMsg string) error {
-	// fmt.Println(c.Name, "- Pong")
+	fmt.Println(c.Name, "- Pong")
 	return c.connection.SetReadDeadline(time.Now().Add(pongWait))
 }
 

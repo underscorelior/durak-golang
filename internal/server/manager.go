@@ -45,6 +45,7 @@ func (m *Manager) setupEventHandlers() {
 	m.handlers[EventJoinLobby] = JoinLobby
 	m.handlers[EventLeaveLobby] = LeaveLobby
 	m.handlers[EventStartGame] = StartGame
+	m.handlers[EventRejoinLobby] = RejoinLobby
 }
 
 func (m *Manager) routeEvent(event Event, c *Client) error {
@@ -61,6 +62,7 @@ func (m *Manager) routeEvent(event Event, c *Client) error {
 func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 	log.Println("New connection")
 	name := r.URL.Query().Get("username")
+	session := r.URL.Query().Get("session")
 
 	conn, err := websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -68,7 +70,32 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := NewClient(conn, m, name)
+	var sv SessionToken
+	var client *Client
+	isRejoining := false
+
+	err = json.Unmarshal([]byte(session), &sv)
+	// FIXME: might be a mistake bc err != nil could be more than just an empty string, but we will use the naive approach
+	if _, ok := m.lobbies[sv.LobbyCode]; !ok || err != nil || sv.Token == "" || sv.LobbyCode == "" {
+		// no prior session, create a new client
+		client = NewClient(conn, m, name)
+	} else {
+		l, lobOk := m.lobbies[sv.LobbyCode]
+		// TODO: Fix whatever the hell this is
+		if !lobOk {
+			client = NewClient(conn, m, name)
+		} else if userId, sessOk := l.sessions[sv.Token]; !sessOk {
+			client = NewClient(conn, m, name)
+		} else {
+			p := l.players[userId]
+
+			client = NewClient(conn, m, p.Name)
+			client.UserID = p.UserID
+
+			isRejoining = true
+		}
+
+	}
 
 	m.addClient(client)
 
@@ -80,6 +107,7 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 	connEstMsg.Name = name
 	connEstMsg.UserID = client.UserID
 	connEstMsg.Lobbies = m.MenuLobbies()
+	connEstMsg.IsRejoining = isRejoining
 
 	data, err := json.Marshal(connEstMsg)
 	if err != nil {
@@ -95,20 +123,24 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 	client.egress <- connectionEstablished
 }
 
-func (m *Manager) addClient(client *Client) {
+func (m *Manager) addClient(c *Client) {
 	m.Lock()
 	defer m.Unlock()
 
-	m.clients[client.UserID] = client
+	m.clients[c.UserID] = c
 }
 
-func (m *Manager) removeClient(client *Client) {
+func (m *Manager) removeClient(c *Client) {
 	m.Lock()
 	defer m.Unlock()
 
-	if _, ok := m.clients[client.UserID]; ok {
-		client.connection.Close()
-		delete(m.clients, client.UserID)
+	if c.lobby != nil {
+		c.lobby.removeClient(c)
+	}
+
+	if _, ok := m.clients[c.UserID]; ok {
+		c.connection.Close()
+		delete(m.clients, c.UserID)
 	}
 }
 

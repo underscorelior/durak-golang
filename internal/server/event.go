@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"time"
 )
 
 type Event struct {
@@ -25,14 +26,27 @@ const (
 	EventLeaveLobby            = "leave_lobby"
 	EventLobbyLeft             = "lobby_left"
 	EventPlayerLeft            = "player_left"
+	EventPlayerDisconnected    = "player_disconnected"
+	EventRejoinLobby           = "rejoin_lobby"
+	EventRejoinLobbyFailed     = "rejoin_lobby_failed"
+	EventLobbyRejoined         = "lobby_rejoined"
+	EventPlayerRejoined        = "player_rejoined"
 	EventStartGame             = "start_game"
 	EventGameStarted           = "game_started"
 )
+
+type LobbyFailedEvent struct {
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	LobbyCode string `json:"lobby_code"`
+}
 
 type ConnectionEstablishedEvent struct {
 	UserID  string         `json:"user_id"`
 	Name    string         `json:"name"`
 	Lobbies []LobbyPreview `json:"lobbies"`
+
+	IsRejoining bool `json:"is_rejoining"`
 }
 
 type MenuLobbiesUpdatedEvent struct {
@@ -56,12 +70,6 @@ type JoinLobbyEvent struct {
 	LobbyCode string `json:"lobby_code"`
 }
 
-type JoinLobbyFailedEvent struct {
-	Code      string `json:"code"`
-	Message   string `json:"message"`
-	LobbyCode string `json:"lobby_code"`
-}
-
 // Sent by server to recently joined client
 type LobbyJoinedEvent struct {
 	Lobby LobbySnapshot `json:"lobby"`
@@ -77,8 +85,28 @@ type LobbyLeftEvent struct {
 
 type PlayerLeftEvent struct {
 	UserID string `json:"user_id"`
+	HostID string `json:"host_id"`
+}
+
+type PlayerDisconnectedEvent struct {
+	UserID         string    `json:"user_id"`
+	DisconnectedAt time.Time `json:"disconnected_at"`
+}
+
+type RejoinLobbyEvent struct {
+	LobbyCode    string `json:"lobby_code"`
+	SessionToken string `json:"session_token"`
+}
+
+type LobbyRejoinedEvent struct {
+	Lobby LobbySnapshot `json:"lobby"`
+}
+
+type PlayerRejoinedEvent struct {
+	UserID string `json:"user_id"`
 }
 
 type GameStartedEvent struct {
-	Lobby LobbySnapshot `json:"lobby"`
+	Lobby        LobbySnapshot `json:"lobby"`
+	SessionToken SessionToken  `json:"session_token"`
 }

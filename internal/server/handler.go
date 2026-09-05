@@ -4,8 +4,10 @@ import (
 	"durak/internal/game"
 	"encoding/json"
 	"fmt"
+	"log"
 	"maps"
 	"slices"
+	"time"
 )
 
 func UpdateUser(event Event, c *Client) error {
@@ -72,7 +74,7 @@ func JoinLobby(event Event, c *Client) error {
 	lobby, ok := c.manager.lobbies[joinLobbyEvent.LobbyCode]
 
 	if !ok {
-		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_not_found", "Lobby does not exist")
+		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_not_found", "Lobby does not exist", EventJoinLobbyFailed)
 
 		if err != nil {
 			return err
@@ -82,8 +84,19 @@ func JoinLobby(event Event, c *Client) error {
 		return nil // I dont think this should be nil
 	}
 
-	if len(lobby.clients) >= int(lobby.MaxPlayers) {
-		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_full", fmt.Sprintf("Lobby is full (Max %v)", lobby.MaxPlayers))
+	if len(lobby.players) >= int(lobby.MaxPlayers) {
+		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_full", fmt.Sprintf("Lobby is full (Max %v)", lobby.MaxPlayers), EventJoinLobbyFailed)
+
+		if err != nil {
+			return err
+		}
+
+		c.egress <- joinLobbyFailed
+		return nil // I dont think this should be nil
+	}
+
+	if _, ok := lobby.clients[c.UserID]; ok {
+		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_duplicate_player", "Lobby contains a player with the same UserID as you", EventJoinLobbyFailed)
 
 		if err != nil {
 			return err
@@ -97,9 +110,11 @@ func JoinLobby(event Event, c *Client) error {
 
 	pos := lobby.nextAvailablePosition()
 	p := &Player{
-		UserID:   c.UserID,
-		Name:     c.Name,
-		Position: lobby.usePosition(pos),
+		UserID:      c.UserID,
+		Name:        c.Name,
+		Position:    lobby.usePosition(pos),
+		JoinedAt:    time.Now(),
+		IsConnected: true,
 	}
 
 	lobby.addClient(c, p)
@@ -142,8 +157,8 @@ func JoinLobby(event Event, c *Client) error {
 	return nil
 }
 
-func createLobbyFailedEvent(lobbyCode, code, message string) (Event, error) {
-	var joinLobbyFailedMsg JoinLobbyFailedEvent
+func createLobbyFailedEvent(lobbyCode, code, message, evtType string) (Event, error) {
+	var joinLobbyFailedMsg LobbyFailedEvent
 
 	joinLobbyFailedMsg.Code = code
 	joinLobbyFailedMsg.Message = message
@@ -156,14 +171,17 @@ func createLobbyFailedEvent(lobbyCode, code, message string) (Event, error) {
 
 	return Event{
 		Payload: data,
-		Type:    EventJoinLobbyFailed,
+		Type:    evtType,
 	}, nil
 }
 
 func LeaveLobby(event Event, c *Client) error {
 	lobby := c.lobby
 
-	lobby.removeClient(c)
+	if err := lobby.removeClient(c); err != nil {
+		log.Println(err)
+		return err
+	}
 
 	var lobbyLeftMsg LobbyLeftEvent
 
@@ -181,33 +199,13 @@ func LeaveLobby(event Event, c *Client) error {
 
 	c.egress <- lobbyLeft
 
-	var playerLeftMsg PlayerLeftEvent
-
-	playerLeftMsg.UserID = c.UserID
-
-	broadcastData, err := json.Marshal(playerLeftMsg)
-	if err != nil {
-		return fmt.Errorf("Failed to marshal player left message: %v", err)
-	}
-
-	playerJoined := Event{
-		Payload: broadcastData,
-		Type:    EventPlayerLeft,
-	}
-
-	ignored := ClientList{
-		c.UserID: c,
-	}
-	lobby.broadcast(playerJoined, ignored)
-
 	return nil
-
 }
 
 func StartGame(event Event, c *Client) error {
 	l := c.lobby
 
-	if c.UserID != l.Host {
+	if c.UserID != l.HostID {
 		// TODO: Return some sort of Error event
 		return nil
 	}
@@ -216,9 +214,12 @@ func StartGame(event Event, c *Client) error {
 	var gameStartedMsg GameStartedEvent
 	gameStartedMsg.Lobby = l.Snapshot()
 
+	l.GenerateSessionTokens()
+
 	for _, cl := range c.lobby.clients {
 		gameStartedMsg.Lobby.Position = l.players[cl.UserID].Position
 		gameStartedMsg.Lobby.GameState = l.game.StateFor(cl.UserID)
+		gameStartedMsg.SessionToken = l.players[cl.UserID].sessionToken
 
 		data, err := json.Marshal(gameStartedMsg)
 		if err != nil {
@@ -233,4 +234,99 @@ func StartGame(event Event, c *Client) error {
 	}
 
 	return nil
+}
+
+func RejoinLobby(event Event, c *Client) error {
+	var rejoinLobbyEvent RejoinLobbyEvent
+
+	if err := json.Unmarshal(event.Payload, &rejoinLobbyEvent); err != nil {
+		return fmt.Errorf("Bad payload in request: %v", err)
+	}
+
+	if c.lobby != nil && rejoinLobbyEvent.LobbyCode == c.lobby.LobbyCode {
+		return nil // How else should I handle this?
+	}
+
+	lobby, ok := c.manager.lobbies[rejoinLobbyEvent.LobbyCode]
+
+	if !ok {
+		rejoinLobbyFailed, err := createLobbyFailedEvent(rejoinLobbyEvent.LobbyCode, "lobby_not_found", "Lobby does not exist", EventRejoinLobbyFailed)
+
+		if err != nil {
+			return err
+		}
+
+		c.egress <- rejoinLobbyFailed
+		return nil // I dont think this should be nil
+	}
+
+	userID, ok := lobby.sessions[rejoinLobbyEvent.SessionToken]
+
+	if !ok {
+		rejoinLobbyFailed, err := createLobbyFailedEvent(rejoinLobbyEvent.LobbyCode, "invalid_session_token", fmt.Sprintf("Your session token is not valid for lobby: %v", rejoinLobbyEvent.LobbyCode), EventRejoinLobbyFailed)
+
+		if err != nil {
+			return err
+		}
+
+		c.egress <- rejoinLobbyFailed
+		return nil // I dont think this should be nil
+	}
+
+	// FIXME: Should we really give the newer client the older ID? Should Player have its own "lobby-specific ID", then clients have their own ID?
+	if userID != c.UserID {
+		rejoinLobbyFailed, err := createLobbyFailedEvent(rejoinLobbyEvent.LobbyCode, "incorrect_user_id", fmt.Sprintf("Your user ID does not match : %v", rejoinLobbyEvent.LobbyCode), EventRejoinLobbyFailed)
+
+		if err != nil {
+			return err
+		}
+
+		c.egress <- rejoinLobbyFailed
+		return nil // I dont think this should be nil
+	}
+
+	c.lobby = lobby
+	p := lobby.players[c.UserID]
+
+	p.IsConnected = true
+
+	lobby.addClient(c, p)
+
+	var lobbyRejoinedMsg LobbyRejoinedEvent
+
+	lobbyRejoinedMsg.Lobby = lobby.SnapshotFor(c)
+
+	data, err := json.Marshal(lobbyRejoinedMsg)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal lobby rejoined message: %v", err)
+	}
+
+	lobbyRejoined := Event{
+		Payload: data,
+		Type:    EventLobbyRejoined,
+	}
+
+	c.egress <- lobbyRejoined
+
+	var playerRejoinedMsg PlayerRejoinedEvent
+
+	playerRejoinedMsg.UserID = c.UserID
+
+	broadcastData, err := json.Marshal(playerRejoinedMsg)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal player joined message: %v", err)
+	}
+
+	playerRejoined := Event{
+		Payload: broadcastData,
+		Type:    EventPlayerRejoined,
+	}
+
+	ignored := ClientList{
+		c.UserID: c,
+	}
+	lobby.broadcast(playerRejoined, ignored)
+
+	return nil
+
 }
