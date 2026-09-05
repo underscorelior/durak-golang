@@ -109,6 +109,17 @@ func JoinLobby(event Event, c *Client) error {
 	c.lobby = lobby
 
 	pos := lobby.nextAvailablePosition()
+	if pos == -1 {
+		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_no_valid_position", "There was an issue finding a valid position", EventJoinLobbyFailed)
+
+		if err != nil {
+			return err
+		}
+
+		c.egress <- joinLobbyFailed
+		return nil // I dont think this should be nil
+	}
+
 	p := &Player{
 		UserID:      c.UserID,
 		Name:        c.Name,
