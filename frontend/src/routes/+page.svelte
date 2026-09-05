@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Lobby from '$lib/components/lobby.svelte';
 	import LobbyPreview from '$lib/components/lobbypreview.svelte';
 	import { createLobby } from '$lib/event/actions';
 	import { connectionState, globalState } from '$lib/state/state.svelte';
@@ -20,6 +19,3 @@
 </button>
 
 {JSON.stringify(connectionState)}
-
-<br />
-<Lobby />
