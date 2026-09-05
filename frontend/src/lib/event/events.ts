@@ -79,6 +79,7 @@ type PlayerLeftPayload = {
 
 type PlayerDisconnectedPayload = {
 	user_id: string;
+	disconnected_at: Date;
 };
 
 type RejoinLobbyPayload = {
@@ -94,6 +95,13 @@ type LobbyRejoinedPayload = {
 
 type PlayerRejoinedPayload = {
 	user_id: string;
+};
+
+type StartGamePayload = object;
+
+type GameStartedPayload = {
+	lobby: Lobby;
+	session: Session;
 };
 
 export type EventPayloads = {
@@ -115,6 +123,8 @@ export type EventPayloads = {
 	[Events.RejoinLobbyFailed]: RejoinLobbyFailedPayload;
 	[Events.LobbyRejoined]: LobbyRejoinedPayload;
 	[Events.PlayerRejoined]: PlayerRejoinedPayload;
+	[Events.StartGame]: StartGamePayload;
+	[Events.GameStarted]: GameStartedPayload;
 };
 
 export type WSEvent = {

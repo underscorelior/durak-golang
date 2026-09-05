@@ -76,17 +76,20 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 
 	err = json.Unmarshal([]byte(session), &sv)
 	// FIXME: might be a mistake bc err != nil could be more than just an empty string, but we will use the naive approach
-	if _, ok := m.lobbies[sv.LobbyCode]; !ok || err != nil || sv.Token == "" || sv.LobbyCode == "" {
+	if _, ok := m.lobbies[sv.LobbyCode]; !ok || err != nil || sv.SessionToken == "" || sv.LobbyCode == "" {
 		// no prior session, create a new client
 		client = NewClient(conn, m, name)
 	} else {
 		l, lobOk := m.lobbies[sv.LobbyCode]
 		// TODO: Fix whatever the hell this is
 		if !lobOk {
+			log.Println("!lobOk")
 			client = NewClient(conn, m, name)
-		} else if userId, sessOk := l.sessions[sv.Token]; !sessOk {
+		} else if userId, sessOk := l.sessions[sv.SessionToken]; !sessOk {
+			log.Printf("!sessOk, %v\n%v\n", sv, l.sessions)
 			client = NewClient(conn, m, name)
 		} else {
+			log.Println("else")
 			p := l.players[userId]
 
 			client = NewClient(conn, m, p.Name)

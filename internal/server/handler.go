@@ -211,6 +211,8 @@ func StartGame(event Event, c *Client) error {
 	}
 
 	l.game = game.InitializeGame(slices.Collect(maps.Keys(l.players)))
+	l.IsPlaying = true
+
 	var gameStartedMsg GameStartedEvent
 	gameStartedMsg.Lobby = l.Snapshot()
 

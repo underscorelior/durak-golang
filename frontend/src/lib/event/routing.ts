@@ -1,13 +1,18 @@
 import { Events, type WSEvent } from './events';
 import {
 	connectionEstablishedHandler,
+	gameStartedHandler,
 	joinLobbyFailedHandler,
 	lobbyCreatedHandler,
 	lobbyJoinedHandler,
 	lobbyLeftHandler,
+	lobbyRejoinedHandler,
 	menuLobbiesUpdatedHandler,
+	playerDisconnectedHandler,
 	playerJoinedHandler,
 	playerLeftHandler,
+	playerRejoinedHandler,
+	rejoinLobbyFailedHandler,
 	userUpdatedHandler
 } from './handlers';
 
@@ -52,6 +57,26 @@ export function routeEvent(event: WSEvent) {
 		}
 		case Events.PlayerLeft: {
 			playerLeftHandler(event.payload);
+			break;
+		}
+		case Events.PlayerDisconnected: {
+			playerDisconnectedHandler(event.payload);
+			break;
+		}
+		case Events.RejoinLobbyFailed: {
+			rejoinLobbyFailedHandler(event.payload);
+			break;
+		}
+		case Events.LobbyRejoined: {
+			lobbyRejoinedHandler(event.payload);
+			break;
+		}
+		case Events.PlayerRejoined: {
+			playerRejoinedHandler(event.payload);
+			break;
+		}
+		case Events.GameStarted: {
+			gameStartedHandler(event.payload);
 			break;
 		}
 	}

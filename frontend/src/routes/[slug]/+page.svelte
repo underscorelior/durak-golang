@@ -6,6 +6,7 @@
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
 	import { untrack } from "svelte";
+	import { hasLocalSession } from "$lib/ws/connection";
 
     const lobby_code = $derived(page.params.slug);
 
@@ -13,11 +14,12 @@
     $effect(() => {
         if (globalState.menu.connection.connected)
         untrack(() => {
-            if (globalState.lobby === null) {
+            if (globalState.lobby === null && !hasLocalSession()) {
                 if (!lobby_code) {
                     goto(resolve('/'));
                     return
                 }
+                console.log("lobby null and not has local session!")
                 joinLobby(lobby_code)
             }
         })

@@ -73,8 +73,8 @@ type LobbyPreview struct {
 }
 
 type Session struct {
-	LobbyCode string `json:"lobby_code"`
-	Token     string `json:"token"`
+	LobbyCode    string `json:"lobby_code"`
+	SessionToken string `json:"session_token"`
 }
 
 func (m *Manager) NewLobby(userID string) *Lobby {
@@ -329,12 +329,12 @@ func (l *Lobby) GenerateSessions() {
 
 	for _, player := range l.players {
 		session := Session{
-			LobbyCode: l.LobbyCode,
-			Token:     uuid.NewString(),
+			LobbyCode:    l.LobbyCode,
+			SessionToken: uuid.NewString(),
 		}
 
 		player.session = session
-		l.sessions[player.UserID] = session.Token
+		l.sessions[session.SessionToken] = player.UserID
 	}
 
 }

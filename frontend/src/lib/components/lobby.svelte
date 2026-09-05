@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { leaveLobby } from '$lib/event/actions';
+	import { leaveLobby, startGame } from '$lib/event/actions';
 	import { globalState } from '$lib/state/state.svelte';
 
 	const lobby = $derived(globalState.lobby);
@@ -12,9 +12,10 @@
 	<h2>
 		Host: {lobby.players.find((p) => {
 			return p.user_id == lobby.host_id;
-		})?.name}
+		})?.user_id}
 	</h2>
 	<p>{JSON.stringify(lobby.players)}</p>
 	<br />
 	<button onclick={() => leaveLobby()}>Leave Lobby</button>
+	<button onclick={() => startGame()} hidden={lobby.host_id != globalState.user.user_id} disabled={lobby.players.length <= 1}>Start Game</button>
 {/if}

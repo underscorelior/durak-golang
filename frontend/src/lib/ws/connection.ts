@@ -8,15 +8,15 @@ let socket: WebSocket | null = null;
 export default function connectWebsocket(): Error | null {
 	if (socket) return null;
 	if (window['WebSocket']) {
-		const session = localStorage.getItem('durak_session');
-		const parsedSession = JSON.parse(session || '{}') as Session;
-		if (session && parsedSession.lobby_code && parsedSession.session_token) {
-			globalState.session = parsedSession;
+		const session = getLocalSession();
+
+		if (session !== null) {
+			globalState.session = JSON.parse(session);
 		}
 
 		connectionState.connecting = true;
 
-		socket = new WebSocket(PUBLIC_WEBSOCKET_URL + (session !== null ? `?session=${session}` : ''));
+		socket = new WebSocket(PUBLIC_WEBSOCKET_URL + (hasLocalSession() ? `?session=${session}` : ''));
 
 		if (socket === null) {
 			connectionState.connecting = false;
@@ -55,4 +55,30 @@ export function sendEvent<E extends keyof EventPayloads>(eventName: E, payload: 
 	const message = JSON.stringify(event);
 
 	socket?.send(message);
+}
+
+export function getLocalSession() {
+	if (hasLocalSession()) {
+		return localStorage.getItem('durak_session') as string;
+	}
+
+	return null;
+}
+
+export function hasLocalSession() {
+	const session = localStorage.getItem('durak_session');
+	console.log(session);
+	if (session == null) {
+		return false;
+	}
+
+	const parsedSession = JSON.parse(session) as Session;
+	if (parsedSession.lobby_code && parsedSession.session_token) {
+		return true;
+	}
+	return false;
+}
+
+export function clearLocalSession() {
+	localStorage.setItem('durak_session', '{}');
 }

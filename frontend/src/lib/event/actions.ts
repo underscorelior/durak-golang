@@ -20,3 +20,7 @@ export function rejoinLobby(session: Session) {
 export function leaveLobby() {
 	sendEvent(Events.LeaveLobby, {});
 }
+
+export function startGame() {
+	sendEvent(Events.StartGame, {});
+}
