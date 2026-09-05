@@ -214,12 +214,12 @@ func StartGame(event Event, c *Client) error {
 	var gameStartedMsg GameStartedEvent
 	gameStartedMsg.Lobby = l.Snapshot()
 
-	l.GenerateSessionTokens()
+	l.GenerateSessions()
 
 	for _, cl := range c.lobby.clients {
 		gameStartedMsg.Lobby.Position = l.players[cl.UserID].Position
 		gameStartedMsg.Lobby.GameState = l.game.StateFor(cl.UserID)
-		gameStartedMsg.SessionToken = l.players[cl.UserID].sessionToken
+		gameStartedMsg.Session = l.players[cl.UserID].session
 
 		data, err := json.Marshal(gameStartedMsg)
 		if err != nil {

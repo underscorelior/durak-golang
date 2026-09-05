@@ -8,7 +8,7 @@ let socket: WebSocket | null = null;
 export default function connectWebsocket(): Error | null {
 	if (socket) return null;
 	if (window['WebSocket']) {
-		const session = localStorage.getItem('session');
+		const session = localStorage.getItem('durak_session');
 		const parsedSession = JSON.parse(session || '{}') as Session;
 		if (session && parsedSession.lobby_code && parsedSession.session_token) {
 			globalState.session = parsedSession;

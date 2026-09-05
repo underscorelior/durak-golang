@@ -107,6 +107,6 @@ type PlayerRejoinedEvent struct {
 }
 
 type GameStartedEvent struct {
-	Lobby        LobbySnapshot `json:"lobby"`
-	SessionToken SessionToken  `json:"session_token"`
+	Lobby   LobbySnapshot `json:"lobby"`
+	Session Session       `json:"session"`
 }

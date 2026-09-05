@@ -70,7 +70,7 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var sv SessionToken
+	var sv Session
 	var client *Client
 	isRejoining := false
 

@@ -23,7 +23,7 @@ type Player struct {
 	Position    int    `json:"position"`
 	IsConnected bool   `json:"is_connected"`
 
-	sessionToken   SessionToken
+	session        Session
 	JoinedAt       time.Time `json:"joined_at"`
 	DisconnectedAt time.Time `json:"disconnected_at,omitempty"`
 }
@@ -72,7 +72,7 @@ type LobbyPreview struct {
 	IsPlaying bool `json:"is_playing"`
 }
 
-type SessionToken struct {
+type Session struct {
 	LobbyCode string `json:"lobby_code"`
 	Token     string `json:"token"`
 }
@@ -324,17 +324,17 @@ func (m *Manager) GenerateLobbyCode(length int) string {
 	return code
 }
 
-func (l *Lobby) GenerateSessionTokens() {
+func (l *Lobby) GenerateSessions() {
 	l.sessions = make(map[string]string)
 
 	for _, player := range l.players {
-		sessionToken := SessionToken{
+		session := Session{
 			LobbyCode: l.LobbyCode,
 			Token:     uuid.NewString(),
 		}
 
-		player.sessionToken = sessionToken
-		l.sessions[player.UserID] = sessionToken.Token
+		player.session = session
+		l.sessions[player.UserID] = session.Token
 	}
 
 }
