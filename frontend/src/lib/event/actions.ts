@@ -1,6 +1,11 @@
 import { sendEvent } from '$lib/ws/connection';
 import { Events, type EventPayloads } from './events';
 
+export function updateUser(name: string) {
+	const updateUser = { name } as EventPayloads[Events.UpdateUser];
+	sendEvent(Events.CreateLobby, updateUser);
+}
+
 export function createLobby() {
 	sendEvent(Events.CreateLobby, {});
 }

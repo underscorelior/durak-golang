@@ -3,7 +3,7 @@ import { joinLobby, rejoinLobby } from './actions';
 import type { EventPayloads, Events } from './events';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import { clearLocalSession } from '$lib/ws/connection';
+import { clearLocalSession, setLocalSession } from '$lib/ws/connection';
 
 export function connectionEstablishedHandler(payload: EventPayloads[Events.ConnectionEstablished]) {
 	globalState.user.name = payload.name;
@@ -96,5 +96,7 @@ export function playerRejoinedHandler(payload: EventPayloads[Events.PlayerRejoin
 
 export function gameStartedHandler(payload: EventPayloads[Events.GameStarted]) {
 	const session = payload.session;
-	localStorage.setItem('durak_session', JSON.stringify(session));
+	setLocalSession(session);
+
+	globalState.lobby = payload.lobby;
 }

@@ -57,6 +57,10 @@ export function sendEvent<E extends keyof EventPayloads>(eventName: E, payload: 
 	socket?.send(message);
 }
 
+export function setLocalSession(session: Session) {
+	localStorage.setItem('durak_session', JSON.stringify(session));
+}
+
 export function getLocalSession() {
 	if (hasLocalSession()) {
 		return localStorage.getItem('durak_session') as string;

@@ -52,6 +52,7 @@ type LobbySnapshot struct {
 	LobbyCode  string    `json:"lobby_code"`
 	HostID     string    `json:"host_id"`
 	IsPrivate  bool      `json:"is_private"`
+	IsStarted  bool      `json:"is_started"`
 	MaxPlayers int       `json:"max_players"`
 	CreatedAt  time.Time `json:"created_at"`
 
@@ -68,7 +69,7 @@ type LobbyPreview struct {
 	MaxPlayers  int       `json:"max_players"`
 	CreatedAt   time.Time `json:"created_at"`
 
-	IsOpen    bool `json:"is_open"`
+	IsOpen    bool `json:"is_open"` // TODO: Need to allow user to join once started if they have a rejoin session token
 	IsPlaying bool `json:"is_playing"`
 }
 
@@ -274,6 +275,8 @@ func (l *Lobby) Snapshot() LobbySnapshot {
 		Players:    l.playerSnapshots(),
 		MaxPlayers: l.MaxPlayers,
 		CreatedAt:  l.CreatedAt,
+		IsPrivate:  l.IsPrivate,
+		IsStarted:  l.IsPlaying,
 	}
 
 	return snapshot

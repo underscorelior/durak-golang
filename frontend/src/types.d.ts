@@ -2,6 +2,7 @@ type Lobby = {
 	lobby_code: string;
 	host_id: string;
 	is_private: boolean;
+	is_started: boolean;
 	max_players: number;
 	created_at: string;
 	players: Player[];
