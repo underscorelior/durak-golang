@@ -1,6 +1,6 @@
 package game
 
-type Suit uint8
+type Suit int
 
 const (
 	Club Suit = iota
@@ -16,7 +16,7 @@ var Suits = [4]Suit{
 	Spade,
 }
 
-type Rank uint8
+type Rank int
 
 const (
 	Six = iota + 6

@@ -5,8 +5,8 @@ type Turn struct {
 	DefenderID        string     `json:"defender_id"` // Is this the best pattern?
 	InitialAttackerID string     `json:"initial_attacker_id"`
 
-	AttackerIDs map[string]struct{} // Figure out how to do this, i doubt this is a good pattern
-	Phase       TurnPhase           `json:"phase"`
+	AttackerIDs map[string]bool `json:"attacker_ids"` // Figure out how to do this, i doubt this is a good pattern
+	Phase       TurnPhase       `json:"phase"`
 }
 
 type TurnPhase int
