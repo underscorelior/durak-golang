@@ -26,9 +26,15 @@ type Session = {
 	session_token: string;
 };
 
+type GamePlayer = {
+	user_id: string;
+	hand_size: number;
+	position: number;
+};
+
 type GameState = {
 	// TODO: Combine both the lobby players and the game state players locally
-	players: { user_id: string; hand_size: number };
+	players: GamePlayer[];
 	hand: Card[];
 	trump: Card;
 	deck_size: number;

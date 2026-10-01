@@ -4,6 +4,7 @@ import type { EventPayloads, Events } from './events';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { clearLocalSession, setLocalSession } from '$lib/ws/connection';
+import { sortHand } from '$lib/util';
 
 export function connectionEstablishedHandler(payload: EventPayloads[Events.ConnectionEstablished]) {
 	globalState.user.name = payload.name;
@@ -96,7 +97,13 @@ export function playerRejoinedHandler(payload: EventPayloads[Events.PlayerRejoin
 
 export function gameStartedHandler(payload: EventPayloads[Events.GameStarted]) {
 	const session = payload.session;
+
 	setLocalSession(session);
 
 	globalState.lobby = payload.lobby;
+
+	globalState.lobby.game_state = {
+		...globalState.lobby.game_state,
+		hand: sortHand(globalState.lobby.game_state?.hand)
+	} as GameState; // TODO: Fix thsi?
 }

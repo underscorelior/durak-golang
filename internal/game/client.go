@@ -3,6 +3,7 @@ package game
 type GamePlayerState struct {
 	UserID   string `json:"user_id"`
 	HandSize int    `json:"hand_size"`
+	Position int    `json:"position"`
 }
 
 type GameStateSnapshot struct {
@@ -19,6 +20,7 @@ func (g *Game) playerSnapshots() []GamePlayerState {
 		playerSnapshot := GamePlayerState{
 			UserID:   userID,
 			HandSize: len(player.hand),
+			Position: player.Position,
 		}
 		playerSnapshots = append(playerSnapshots, playerSnapshot)
 	}

@@ -2,11 +2,10 @@
 	import { leaveLobby, startGame } from '$lib/event/actions';
 	import { globalState } from '$lib/state/state.svelte';
 	import { shID } from '$lib/util';
-	import Card from './card.svelte';
 	import Table from './table.svelte';
 
 	const lobby = $derived(globalState.lobby);
-	let cards = $derived(globalState.lobby?.game_state?.hand);
+
 
 </script>
 
@@ -24,12 +23,4 @@
 	<button onclick={() => startGame()} hidden={lobby.host_id != globalState.user.user_id || globalState.lobby?.is_started} disabled={lobby.players.length <= 1}>Start Game</button>
 
 	<Table />
-
-	{#if lobby.is_started}
-		<div style="display: flex; flex-direction: row; gap: 5 5;">
-			{#each cards as card, i (i)}
-				<Card {card} />
-			{/each}
-		</div>
-	{/if}
 {/if}

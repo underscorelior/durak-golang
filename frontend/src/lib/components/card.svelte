@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { rankToString, suitToColor, suitToSymbol } from "$lib/util";
 
-    const { card, draggable = true }: { card: Card, draggable?: boolean } = $props()
+    const { card, index = 0, middle = 0, draggable = true }: { card: Card, index?: number, middle?: number, draggable?: boolean } = $props()
 
     const rank = $derived(rankToString[card.rank])
     const suitSymbol = $derived(suitToSymbol[card.suit])
@@ -9,7 +9,7 @@
 </script>
 
 
-<div class="card" style="--suit-color: {suitColor}" draggable={draggable ? "true" : 'false'}>
+<div class="card" style="--suit-color: {suitColor}; --index: {index}; --middle: {middle}" draggable={draggable ? "true" : 'false'}>
     <p class="rank-number left">
         {rank}
     </p>
@@ -35,6 +35,17 @@
         margin: 10px;
         color: var(--suit-color);
         
+        transition: all;
+        transition-duration: 100ms;
+        transition-timing-function: cubic-bezier();
+
+        /* position: absolute; */
+        /* transform-origin: center 500%; */
+        /* transform: translate(-50%, -50%) rotate(calc((var(--middle) - var(--index)) * -2.5deg)); */
+    }
+
+    .card:hover {
+        scale: 1.05;
     }
 
     .rank-art {

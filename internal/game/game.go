@@ -5,7 +5,8 @@ import (
 )
 
 type PlayerState struct {
-	hand []Card
+	hand     []Card
+	Position int
 }
 
 type Game struct {
@@ -19,6 +20,7 @@ type Game struct {
 // Generates a full deck of cards
 func CreateDeck() []Card {
 	var deck []Card
+
 	for _, suit := range Suits {
 		for _, rank := range Ranks {
 			deck = append(deck, Card{suit, rank})
@@ -44,11 +46,12 @@ func (g *Game) DealCards() {
 }
 
 // Creates and shuffles the deck, deals cards and picks the Trump card
-func InitializeGame(players []string) *Game {
+// TODO: Fix the argument type
+func InitializeGame(players map[string]struct{ Position int }) *Game {
 	var g Game
 	g.players = make(map[string]*PlayerState, len(players))
-	for _, k := range players {
-		g.players[k] = &PlayerState{}
+	for k, v := range players {
+		g.players[k] = &PlayerState{Position: v.Position}
 	}
 
 	g.deck = CreateDeck()

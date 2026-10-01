@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"maps"
-	"slices"
 	"time"
 )
 
@@ -221,7 +219,13 @@ func StartGame(event Event, c *Client) error {
 		return nil
 	}
 
-	l.game = game.InitializeGame(slices.Collect(maps.Keys(l.players)))
+	gamePlayers := make(map[string]struct{ Position int })
+
+	for k, v := range l.players { // TODO: Fix this BS
+		gamePlayers[k] = struct{ Position int }{Position: v.Position}
+	}
+
+	l.game = game.InitializeGame(gamePlayers)
 	l.IsPlaying = true
 
 	var gameStartedMsg GameStartedEvent
