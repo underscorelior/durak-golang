@@ -73,12 +73,12 @@ type Turn = {
 	table_state: CardPair[];
 	defender_id: string;
 	initial_attacker_id: string;
-	// attackerIds: string[];
+	attacker_ids: string[];
 	phase: TurnPhase;
 };
 
 enum TurnPhase {
-	Initial,
+	Initial = 0,
 	Attack,
 	Defense,
 	Complete

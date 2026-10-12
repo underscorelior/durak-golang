@@ -7,9 +7,13 @@
 
     
     let game = $derived(globalState.lobby?.game_state)
+    let card_pairs = $derived(globalState.lobby?.game_state?.turn.table_state)
     let pos = $derived(globalState.lobby?.position)
     let max_players = $derived(globalState.lobby?.max_players)
+    // FIXME: Allow for updating of the state, while keeping the typesafety (|| [] seems to break the reactivity)
     let players = $derived(globalState.lobby?.game_state?.players || [])
+
+    let game_started = $derived(globalState.lobby?.is_started)
 
 
     const playerPosOffset = (pl: GamePlayer, off: number) => pl.position == ((pos || 0) + off) % (max_players || 1)
@@ -17,6 +21,25 @@
     let left = $derived(players.find((pl) => playerPosOffset(pl, 1)))
     let front  = $derived(players.find((pl) => playerPosOffset(pl, 2)))
     let right = $derived(players.find((pl) => playerPosOffset(pl, 3)))
+
+    function dragover(e) {
+        e.preventDefault(); 
+        e.dataTransfer.dropEffect = 'move';
+    }
+    
+    function drop(e, pair: number) {
+        e.preventDefault(); 
+        console.log(card_pairs)
+        card_pairs[pair] = {
+            'attack_card': {
+                suit: e.dataTransfer.getData('suit'),
+                rank: e.dataTransfer.getData('rank')
+            }
+        }
+
+        console.log(e.dataTransfer.getData('suit'), e.dataTransfer.getData('rank'))
+    }
+
     
 </script>
 
@@ -27,14 +50,24 @@
     <div class="player-box" id="player-left">
         <Opponent player={left} />
     </div>
-    <div class="tabletop">1,1-4,4
+    <div class="tabletop">
 
+    {#if game_started}
+        {#each Array(6).keys() as pair (pair)}
+            <div class="card-pair" ondragover={dragover} ondrop={(e)=>drop(e, pair)} role="group">
+                {pair}
+                <Card card={card_pairs[pair]['attack_card']} draggable={false} />
+            </div>
+        {/each}
+    {/if}
     </div>
     <div class="player-box" id="player-right">
         <Opponent player={right} />
     </div>
     <div class="player-box" id="player-bottom" style="margin-inline: auto">
         {shID(globalState.user.user_id)} ({globalState.lobby?.position})
+        <br />
+        <br />
         <br />
         {#if globalState.lobby?.is_started}
             <div>
@@ -69,6 +102,14 @@
         width: 100%;
         height: 100%;
         border: 1px solid gray;
+
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+    }
+
+    .card-pair {
+        border: 1px solid black;
     }
 
     .deck {

@@ -6,10 +6,17 @@
     const rank = $derived(rankToString[card.rank])
     const suitSymbol = $derived(suitToSymbol[card.suit])
     const suitColor = $derived(suitToColor[card.suit])
+
+    function dragstart(evt: DragEvent) {
+        evt.dataTransfer?.setData("rank", card.rank.toString())
+        evt.dataTransfer?.setData("suit", card.suit.toString())
+        console.log(evt.dataTransfer?.getData("rank"), "Rank")
+        console.log(evt)
+    }
 </script>
 
-
-<div class="card" style="--suit-color: {suitColor}; --index: {index}; --middle: {middle}" draggable={draggable ? "true" : 'false'}>
+{#if card.rank != 0}
+<div role="button" tabindex="0" ondragstart={(evt)=> dragstart(evt)} class="card" style="--suit-color: {suitColor}; --index: {index}; --middle: {middle}" draggable={draggable ? "true" : 'false'}>
     <p class="rank-number left">
         {rank}
     </p>
@@ -21,6 +28,11 @@
     <p class="rank-number right">{rank}</p>
     
 </div>
+{:else}
+<div class="card empty">
+
+</div>
+{/if}
 
 <style>
     .card {
@@ -43,10 +55,19 @@
         /* transform-origin: center 500%; */
         /* transform: translate(-50%, -50%) rotate(calc((var(--middle) - var(--index)) * -2.5deg)); */
     }
-
+    
     .card:hover {
         scale: 1.05;
     }
+
+    .card.empty {
+        background-color: rgba(0,0,0,0.2);
+    }
+    
+    .card.empty:hover {
+        scale: 1;
+    }
+
 
     .rank-art {
         display: flex;
