@@ -2,7 +2,7 @@ package game
 
 type Turn struct {
 	TableState        []CardPair `json:"table_state"`
-	DefenderID        string     `json:"defender_id"` // Is this the best pattern?
+	DefenderID        string     `json:"defender_id"`
 	InitialAttackerID string     `json:"initial_attacker_id"`
 
 	AttackerIDs map[string]bool `json:"attacker_ids"` // Figure out how to do this, i doubt this is a good pattern

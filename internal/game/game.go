@@ -111,8 +111,8 @@ func (g *Game) SetupTableOrder() {
 	for _, key := range keys {
 		pos := players[key].Position
 		tableOrder[key] = PlayerOrder{
-			Next:     g.PlayerAtPosition((pos + 1) % numPlayers),
-			Previous: g.PlayerAtPosition((pos - 1) % numPlayers),
+			Next:     g.PlayerAtPosition(calcPosOffset(pos, 1, numPlayers)),
+			Previous: g.PlayerAtPosition(calcPosOffset(pos, -1, numPlayers)),
 		}
 	}
 
@@ -152,6 +152,8 @@ func InitializeGame(players map[string]struct{ Position int }) *Game {
 
 	g.SetupTableOrder()
 
+	g.SetupInitialTurn()
+
 	return &g
 }
 
@@ -161,5 +163,9 @@ func (g *Game) DeckSize() int {
 
 func (g *Game) AdjacentTo(userID string) map[string]bool {
 	o := g.Order[userID]
-	return map[string]bool{o.Next: true, o.Previous: false}
+	return map[string]bool{o.Next: true, o.Previous: true}
+}
+
+func calcPosOffset(pos, offset, num int) int {
+	return ((pos+offset)%num + num) % num
 }
