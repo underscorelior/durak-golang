@@ -1,3 +1,4 @@
+import type { Action } from '$lib/util';
 import { sendEvent } from '$lib/ws/connection';
 import { Events, type EventPayloads } from './events';
 
@@ -28,4 +29,14 @@ export function leaveLobby() {
 
 export function startGame() {
 	sendEvent(Events.StartGame, {});
+}
+
+export function makeAction(action: Action, card?: Card, pair_index?: number) {
+	const makeAction = {
+		action,
+		card,
+		pair_index
+	} as EventPayloads[Events.MakeAction];
+
+	sendEvent(Events.MakeAction, makeAction);
 }

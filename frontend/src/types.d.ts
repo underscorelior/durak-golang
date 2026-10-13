@@ -83,10 +83,3 @@ enum TurnPhase {
 	Defense,
 	Complete
 }
-
-enum Action {
-	Defense = 0,
-	Attack,
-	Pass,
-	Take
-}

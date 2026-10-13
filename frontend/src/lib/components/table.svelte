@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { makeAction } from "$lib/event/actions";
 	import { globalState } from "$lib/state/state.svelte";
-	import { shID } from "$lib/util";
+	import { Action, shID } from "$lib/util";
 	import Card from './card.svelte';
 	import Hand from "./hand.svelte";
 	import Opponent from "./opponent.svelte";
@@ -22,22 +23,16 @@
     let front  = $derived(players.find((pl) => playerPosOffset(pl, 2)))
     let right = $derived(players.find((pl) => playerPosOffset(pl, 3)))
 
-    function dragover(e) {
+    function dragover(e: DragEvent) {
         e.preventDefault(); 
         e.dataTransfer.dropEffect = 'move';
     }
     
-    function drop(e, pair: number) {
+    function drop(e: DragEvent, pair: number) {
         e.preventDefault(); 
-        console.log(card_pairs)
-        card_pairs[pair] = {
-            'attack_card': {
-                suit: e.dataTransfer.getData('suit'),
-                rank: e.dataTransfer.getData('rank')
-            }
-        }
+        const card = JSON.parse(e.dataTransfer.getData('card'))
 
-        console.log(e.dataTransfer.getData('suit'), e.dataTransfer.getData('rank'))
+        makeAction(Action.Attack, card, pair)
     }
 
     

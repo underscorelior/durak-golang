@@ -1,3 +1,5 @@
+import type { Action } from '$lib/util';
+
 export enum Events {
 	ConnectionEstablished = 'connection_established',
 	MenuLobbiesUpdated = 'menu_lobbies_updated', // TODO: Find better name
@@ -116,6 +118,7 @@ type MakeActionPayload = {
 type ActionMadePayload = {
 	user_id: string;
 	action: Action;
+	turn_phase: TurnPhase;
 	card?: Card;
 	pair_index?: number;
 };

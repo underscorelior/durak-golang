@@ -8,10 +8,7 @@
     const suitColor = $derived(suitToColor[card.suit])
 
     function dragstart(evt: DragEvent) {
-        evt.dataTransfer?.setData("rank", card.rank.toString())
-        evt.dataTransfer?.setData("suit", card.suit.toString())
-        console.log(evt.dataTransfer?.getData("rank"), "Rank")
-        console.log(evt)
+        evt.dataTransfer?.setData("card", JSON.stringify(card))
     }
 </script>
 
