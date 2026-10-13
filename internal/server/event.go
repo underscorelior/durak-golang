@@ -1,6 +1,7 @@
 package server
 
 import (
+	"durak/internal/game"
 	"encoding/json"
 	"time"
 )
@@ -33,6 +34,9 @@ const (
 	EventPlayerRejoined        = "player_rejoined"
 	EventStartGame             = "start_game"
 	EventGameStarted           = "game_started"
+	EventMakeAction            = "make_action"
+	EventActionMade            = "action_made"
+	EventActionFailed          = "action_failed"
 )
 
 type LobbyFailedEvent struct {
@@ -109,4 +113,21 @@ type PlayerRejoinedEvent struct {
 type GameStartedEvent struct {
 	Lobby   LobbySnapshot `json:"lobby"`
 	Session Session       `json:"session"`
+}
+
+type MakeActionEvent struct {
+	Action    game.Action `json:"action"`
+	Card      *game.Card  `json:"card,omitempty"`
+	PairIndex *int        `json:"pair_index,omitempty"`
+}
+
+type ActionMadeEvent struct {
+	UserID    string      `json:"user_id"`
+	Action    game.Action `json:"action"`
+	Card      game.Card   `json:"card,omitempty"`
+	PairIndex int         `json:"pair_index,omitempty"`
+}
+
+type ActionFailedEvent struct {
+	game.Error
 }

@@ -331,7 +331,7 @@ func RejoinLobby(event Event, c *Client) error {
 
 	broadcastData, err := json.Marshal(playerRejoinedMsg)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal player joined message: %v", err)
+		return fmt.Errorf("Failed to marshal player joined message: %v\n", err)
 	}
 
 	playerRejoined := Event{
@@ -343,6 +343,65 @@ func RejoinLobby(event Event, c *Client) error {
 		c.UserID: c,
 	}
 	lobby.broadcast(playerRejoined, ignored)
+
+	return nil
+
+}
+
+func MakeAction(event Event, c *Client) error {
+	var makeAction MakeActionEvent
+
+	if err := json.Unmarshal(event.Payload, &makeAction); err != nil {
+		return fmt.Errorf("Bad payload in request: %v", err)
+	}
+
+	ok, gmErr := c.lobby.game.ValidateTurn(c.UserID, makeAction.Action, makeAction.Card, makeAction.PairIndex)
+
+	if !ok {
+		var actionFailedMsg ActionFailedEvent
+
+		actionFailedMsg.Code = gmErr.Code
+		actionFailedMsg.Message = gmErr.Message
+
+		actionFailedData, err := json.Marshal(actionFailedMsg)
+
+		if err != nil {
+			return fmt.Errorf("Failed to marshal action failed message: %v\n", err)
+		}
+
+		actionFailed := Event{
+			Payload: actionFailedData,
+			Type:    EventActionFailed,
+		}
+
+		c.egress <- actionFailed
+
+		return fmt.Errorf("Action Failed in MakeAction: %v\n", err)
+	}
+
+	var actionMadeMsg ActionMadeEvent
+
+	actionMadeMsg.UserID = c.UserID
+	actionMadeMsg.Action = makeAction.Action
+	actionMadeMsg.Card = *makeAction.Card
+	actionMadeMsg.PairIndex = *makeAction.PairIndex
+
+	actionMadeData, err := json.Marshal(actionMadeMsg)
+
+	if err != nil {
+		return fmt.Errorf("Failed to marshal action made message: %v\n", err)
+	}
+
+	actionMade := Event{
+		Payload: actionMadeData,
+		Type:    EventActionMade,
+	}
+
+	ignored := ClientList{
+		c.UserID: c,
+	}
+
+	c.lobby.broadcast(actionMade, ignored)
 
 	return nil
 

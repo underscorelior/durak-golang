@@ -18,7 +18,10 @@ export enum Events {
 	LobbyRejoined = 'lobby_rejoined',
 	PlayerRejoined = 'player_rejoined',
 	StartGame = 'start_game',
-	GameStarted = 'game_started'
+	GameStarted = 'game_started',
+	MakeAction = 'make_action',
+	ActionMade = 'action_made', // TODO: Find better name
+	ActionFailed = 'action_failed'
 }
 
 type LobbyFailedEvent = {
@@ -104,6 +107,24 @@ type GameStartedPayload = {
 	session: Session;
 };
 
+type MakeActionPayload = {
+	action: Action;
+	card?: Card;
+	pair_index?: number;
+};
+
+type ActionMadePayload = {
+	user_id: string;
+	action: Action;
+	card?: Card;
+	pair_index?: number;
+};
+
+type ActionFailedPayload = {
+	code: string;
+	message: string;
+};
+
 export type EventPayloads = {
 	[Events.ConnectionEstablished]: ConnectionEstablishedPayload;
 	[Events.MenuLobbiesUpdated]: MenuLobbiesUpdatedPayload;
@@ -125,6 +146,9 @@ export type EventPayloads = {
 	[Events.PlayerRejoined]: PlayerRejoinedPayload;
 	[Events.StartGame]: StartGamePayload;
 	[Events.GameStarted]: GameStartedPayload;
+	[Events.MakeAction]: MakeActionPayload;
+	[Events.ActionMade]: ActionMadePayload;
+	[Events.ActionFailed]: ActionFailedPayload;
 };
 
 export type WSEvent = {
