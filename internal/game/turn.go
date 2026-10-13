@@ -18,6 +18,15 @@ const (
 	COMPLETE
 )
 
+type Action int
+
+const (
+	Defense = iota
+	Attack
+	Pass
+	Take
+)
+
 // Checks if the player is a valid attacker
 func (t *Turn) IsAttacker(playerID string) bool {
 	_, exists := t.AttackerIDs[playerID]
@@ -27,4 +36,21 @@ func (t *Turn) IsAttacker(playerID string) bool {
 // Checks if the player is the current defender
 func (t *Turn) IsDefender(playerID string) bool {
 	return playerID == t.InitialAttackerID
+}
+
+// Checks if there is still capacity for another attack card
+func (t *Turn) TableIsFull() bool {
+	// TODO: Support 5 before first beat and 6 after
+
+	for _, pair := range t.TableState {
+		if !pair.IsOccupied() {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (t *Turn) GetPairFromIndex(index int) CardPair {
+	return t.TableState[index]
 }

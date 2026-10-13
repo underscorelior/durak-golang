@@ -1,61 +1,132 @@
 package game
 
-// Can the defense Card beat the attack Card, checks Trump supremacy too
-func (g *Game) CanBeat(attack Card, defense Card) bool {
-	// If the suits are equal, return whether the defense is more powerful than the attack.
-	if attack.Suit == defense.Suit {
-		return attack.Rank < defense.Rank
-	}
+// Checks if a player is allowed to be placed among existing cards
+func (t *Turn) CanPlace(card Card) bool {
+	rankSet := make(map[Rank]bool)
 
-	// Else return whether the defense is a trump card
-	return defense.Suit == g.Trump.Suit
-}
-
-// Checks if a player is allowed to place (Both existing ranks and if its attacker)
-func (t *Turn) CanPlace(playerID string, card Card) bool {
-	if t.Phase == INITIAL && playerID == t.InitialAttackerID {
-		return true
-	}
-
-	rankSet := make(map[Rank]struct{}) // Should this be bool isntead of struct{}?
 	for _, pairs := range t.TableState {
-		rankSet[pairs.AttackCard.Rank] = struct{}{}
-		rankSet[pairs.DefenseCard.Rank] = struct{}{}
+		rankSet[pairs.AttackCard.Rank] = true
+		rankSet[pairs.DefenseCard.Rank] = true
 	}
 
 	_, exists := rankSet[card.Rank]
 
-	// TODO: This would mean that no one can attack while there is a card that has not been defended,
-	// 		 need to find this out. Also might cause an issue with multiple cards.
-	return exists && t.IsAttacker(playerID) && t.Phase == ATTACK
+	return exists
 }
 
-// Checks if the Player is allowed to make an attack
-//   - Checks if the player is a defender
-//   - Checks if the player is the initial attacker and the current phase is INITIAL
-//   - Checks if the player is an attacker and if the Rank exists
-func (g *Game) CanAttack(playerID string, attack Card) bool {
-	if g.Turn.IsDefender(playerID) {
-		return false
+func (g *Game) ValidateTurn(userID string, action Action, card *Card, pairIndex *int) (bool, Error) {
+	t := g.Turn
+
+	// Take and Pass
+	if action == Take {
+		if !t.IsDefender(userID) {
+			// Error message for this
+			return false, Error{
+				Code:    "INVALID_ROLE",
+				Message: "This user is not the defender",
+			}
+		}
+
+		if t.Phase != DEFENSE {
+			return false, Error{
+				Code:    "INVALID_PHASE",
+				Message: "Cannot take cards when it's not the defender's action",
+			}
+		}
+
+		return true, Error{}
 	}
 
-	return g.Turn.CanPlace(playerID, attack)
-}
+	// TODO: Passing
 
-// Checks if the player is capable of making a valid defense
-func (g *Game) CanDefend(playerID string, attack Card, defense Card) bool {
-	if !g.Turn.IsDefender(playerID) {
-		return false
+	// Defense and Attack
+	var cardPair CardPair
+
+	if pairIndex == nil {
+		return false, Error{
+			Code:    "MISSING_ARGUMENT",
+			Message: "Action event is missing CardPair index",
+		}
+	}
+	if card == nil {
+		return false, Error{
+			Code:    "MISSING_ARGUMENT",
+			Message: "Action event is missing Card played",
+		}
+	}
+	if g.CardInHand(userID, *card) {
+		return false, Error{
+			Code:    "CARD_NOT_IN_HAND",
+			Message: "Selected card is not in players hand",
+		}
+	}
+	cardPair = t.TableState[*pairIndex]
+
+	// Defense:
+	if action == Defense {
+		if !t.IsDefender(userID) {
+			return false, Error{
+				Code:    "INVALID_ROLE",
+				Message: "This user is not the defender",
+			}
+		}
+
+		if t.Phase != DEFENSE {
+			return false, Error{
+				Code:    "INVALID_PHASE",
+				Message: "Cannot defend when it's not the defender's action",
+			}
+		}
+
+		if !cardPair.DefendedBy(*card, g.Trump.Suit) {
+			return false, Error{
+				Code:    "INVALID_DEFENSE_CARD",
+				Message: "The provided defense card is unable to beat the attacking card",
+			}
+		}
+
+		return true, Error{}
 	}
 
-	return g.CanBeat(attack, defense) && g.Turn.Phase == DEFENSE
-}
+	// Attack:
+	if action == Attack {
+		if t.Phase == INITIAL && userID == t.InitialAttackerID {
+			return true, Error{}
+		}
 
-// Checks if a player is allowed to take
-func (g *Game) CanTake(playerID string) bool {
-	if !g.Turn.IsDefender(playerID) {
-		return false
+		if !t.IsAttacker(userID) {
+			return false, Error{
+				Code:    "INVALID_ROLE",
+				Message: "This user is not an attacker",
+			}
+		}
+
+		if t.Phase != ATTACK {
+			return false, Error{
+				Code:    "INVALID_PHASE",
+				Message: "Cannot attack when it's not the attacker's action",
+			}
+		}
+
+		if t.TableIsFull() {
+			return false, Error{
+				Code:    "TABLE_FULL",
+				Message: "Unable to place additional attack card",
+			}
+		}
+
+		if !t.CanPlace(*card) {
+			return false, Error{
+				Code:    "INVALID_CARD",
+				Message: "This card's rank is not placeable in the current conditions",
+			}
+		}
+
+		return true, Error{}
 	}
 
-	return g.Turn.Phase == DEFENSE
+	return false, Error{
+		Code:    "INVALID_ACTION",
+		Message: "Action event provided invalid action",
+	}
 }

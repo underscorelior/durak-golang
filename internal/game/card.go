@@ -53,3 +53,24 @@ type CardPair struct {
 	DefenseCard *Card `json:"defense_card,omitempty"`
 	IsDefended  bool  `json:"is_defended,omitempty"`
 }
+
+// Can the defense Card beat the attack Card, checks Trump supremacy too
+func (cp *CardPair) DefendedBy(defense Card, trumpSuit Suit) bool {
+	if cp.IsDefended {
+		return false
+	}
+
+	attack := cp.AttackCard
+
+	// If the suits are equal, return whether the defense is more powerful than the attack.
+	if attack.Suit == defense.Suit {
+		return attack.Rank < defense.Rank
+	}
+
+	// Else return whether the defense is a trump card
+	return defense.Suit == trumpSuit
+}
+
+func (cp *CardPair) IsOccupied() bool {
+	return cp.AttackCard.Rank != 0 && cp.AttackCard.Suit != 0 // FIXME: Need a better check than this.
+}

@@ -29,6 +29,11 @@ type Game struct {
 	Turn  Turn
 }
 
+type Error struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
 // Generates a full deck of cards
 func CreateDeck() []Card {
 	var deck []Card
@@ -168,4 +173,8 @@ func (g *Game) AdjacentTo(userID string) map[string]bool {
 
 func calcPosOffset(pos, offset, num int) int {
 	return ((pos+offset)%num + num) % num
+}
+
+func (g *Game) CardInHand(userID string, card Card) bool {
+	return slices.Contains(g.players[userID].hand, card)
 }
