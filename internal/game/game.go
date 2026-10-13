@@ -124,8 +124,22 @@ func (g *Game) SetupTableOrder() {
 	g.Order = tableOrder
 }
 
-func (g *Game) SetupInitialTurn() {
-	initialAttacker := g.FindPlayerWithLowestTrumpCardInHand()
+func (g *Game) AdjacentTo(userID string) map[string]bool {
+	o := g.Order[userID]
+	return map[string]bool{o.Next: true, o.Previous: true}
+}
+
+func (g *Game) StartNextTurn(initial bool, skipDefender bool) {
+	var initialAttacker string
+
+	if initial {
+		initialAttacker = g.FindPlayerWithLowestTrumpCardInHand()
+	} else if skipDefender {
+		initialAttacker = g.Order[g.Turn.DefenderID].Next
+	} else {
+		initialAttacker = g.Turn.DefenderID
+	}
+
 	defender := g.Order[initialAttacker].Next
 
 	turn := Turn{
@@ -157,7 +171,7 @@ func InitializeGame(players map[string]struct{ Position int }) *Game {
 
 	g.SetupTableOrder()
 
-	g.SetupInitialTurn()
+	g.StartNextTurn(true, false)
 
 	return &g
 }
@@ -166,15 +180,61 @@ func (g *Game) DeckSize() int {
 	return len(g.deck)
 }
 
-func (g *Game) AdjacentTo(userID string) map[string]bool {
-	o := g.Order[userID]
-	return map[string]bool{o.Next: true, o.Previous: true}
-}
-
 func calcPosOffset(pos, offset, num int) int {
 	return ((pos+offset)%num + num) % num
 }
 
 func (g *Game) CardInHand(userID string, card Card) bool {
 	return slices.Contains(g.players[userID].hand, card)
+}
+
+// Draws specified number of cards into player's hand. Returns a boolean representing if any more cards can be drawn.
+func (g *Game) DrawCards(userID string, amount int) bool {
+	for range max(amount, 0) {
+		g.players[userID].hand = append(g.players[userID].hand, g.deck[0])
+		g.deck = g.deck[1:]
+
+		// TODO: NEED TO ACCOUNT FOR TRUMP CARD
+		if len(g.deck) <= 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (g *Game) DistributeCards() {
+	ia := g.Turn.InitialAttackerID
+
+	g.DrawCards(ia, 6-len(g.players[ia].hand))
+
+	for attacker := range g.Turn.AttackerIDs {
+		if attacker != ia {
+			g.DrawCards(attacker, 6-len(g.players[attacker].hand))
+		}
+	}
+
+	g.DrawCards(g.Turn.DefenderID, 6-len(g.players[g.Turn.DefenderID].hand))
+}
+
+func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *int) error {
+	t := g.Turn
+
+	if action == Take {
+		g.players[userID].hand = append(g.players[userID].hand, t.GetPlayedCards()...)
+
+		g.DistributeCards()
+		g.StartNextTurn(false, true)
+	}
+
+	if action == Pass {
+	}
+
+	if action == Defense {
+	}
+
+	if action == Attack {
+	}
+
+	return nil
 }

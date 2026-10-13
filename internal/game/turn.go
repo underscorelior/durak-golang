@@ -54,3 +54,13 @@ func (t *Turn) TableIsFull() bool {
 func (t *Turn) GetPairFromIndex(index int) CardPair {
 	return t.TableState[index]
 }
+
+func (t *Turn) GetPlayedCards() []Card {
+	cards := make([]Card, 12)
+
+	for _, pair := range t.TableState {
+		cards = append(cards, pair.AttackCard, *pair.DefenseCard)
+	}
+
+	return cards
+}

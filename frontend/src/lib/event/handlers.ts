@@ -4,7 +4,7 @@ import type { EventPayloads, Events } from './events';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { clearLocalSession, setLocalSession } from '$lib/ws/connection';
-import { sortHand } from '$lib/util';
+import { Action, sortHand } from '$lib/util';
 
 export function connectionEstablishedHandler(payload: EventPayloads[Events.ConnectionEstablished]) {
 	globalState.user.name = payload.name;
@@ -114,7 +114,28 @@ export function gameStartedHandler(payload: EventPayloads[Events.GameStarted]) {
 	} as GameState; // TODO: Fix thsi?
 }
 
-export function actionMadeHandler(payload: EventPayloads[Events.ActionMade]) {}
+export function actionMadeHandler(payload: EventPayloads[Events.ActionMade]) {
+	if (!globalState.lobby || !globalState.lobby.game_state) {
+		alert('ERROR LOBBY OR GAME STATE NULL');
+		return;
+	}
+	const playerIndex = globalState.lobby?.game_state?.players.findIndex(
+		(gp) => gp.user_id == payload.user_id
+	);
+
+	if (payload.action == Action.Attack && payload.pair_index && payload.card) {
+		globalState.lobby.game_state.players[playerIndex].hand_size -= 1;
+		globalState.lobby.game_state.turn.table_state[payload.pair_index].attack_card = payload.card;
+
+		if (payload.user_id == globalState.user.user_id) {
+			globalState.lobby.game_state.hand = globalState.lobby.game_state.hand.filter(
+				(card) => card.rank != payload.card?.rank || card.suit != payload.card?.suit
+			);
+		}
+	}
+
+	// globalState.lobby?.game_state.
+}
 
 export function actionFailedHandler(payload: EventPayloads[Events.ActionFailed]) {
 	alert(`${payload.code}: ${payload.message}`);
