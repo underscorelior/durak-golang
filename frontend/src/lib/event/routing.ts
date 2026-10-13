@@ -1,5 +1,7 @@
 import { Events, type WSEvent } from './events';
 import {
+	actionFailedHandler,
+	actionMadeHandler,
 	connectionEstablishedHandler,
 	gameStartedHandler,
 	joinLobbyFailedHandler,
@@ -77,6 +79,14 @@ export function routeEvent(event: WSEvent) {
 		}
 		case Events.GameStarted: {
 			gameStartedHandler(event.payload);
+			break;
+		}
+		case Events.ActionMade: {
+			actionMadeHandler(event.payload);
+			break;
+		}
+		case Events.ActionFailed: {
+			actionFailedHandler(event.payload);
 			break;
 		}
 	}

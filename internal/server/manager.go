@@ -46,6 +46,7 @@ func (m *Manager) setupEventHandlers() {
 	m.handlers[EventLeaveLobby] = LeaveLobby
 	m.handlers[EventStartGame] = StartGame
 	m.handlers[EventRejoinLobby] = RejoinLobby
+	m.handlers[EventMakeAction] = MakeAction
 }
 
 func (m *Manager) routeEvent(event Event, c *Client) error {

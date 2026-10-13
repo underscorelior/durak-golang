@@ -113,3 +113,9 @@ export function gameStartedHandler(payload: EventPayloads[Events.GameStarted]) {
 		}
 	} as GameState; // TODO: Fix thsi?
 }
+
+export function actionMadeHandler(payload: EventPayloads[Events.ActionMade]) {}
+
+export function actionFailedHandler(payload: EventPayloads[Events.ActionFailed]) {
+	alert(`${payload.code}: ${payload.message}`);
+}
