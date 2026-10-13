@@ -122,10 +122,11 @@ type MakeActionEvent struct {
 }
 
 type ActionMadeEvent struct {
-	UserID    string      `json:"user_id"`
-	Action    game.Action `json:"action"`
-	Card      game.Card   `json:"card,omitempty"`
-	PairIndex int         `json:"pair_index,omitempty"`
+	UserID    string         `json:"user_id"`
+	Action    game.Action    `json:"action"`
+	Phase     game.TurnPhase `json:"turn_phase"`
+	Card      *game.Card     `json:"card,omitempty"`
+	PairIndex *int           `json:"pair_index,omitempty"`
 }
 
 type ActionFailedEvent struct {

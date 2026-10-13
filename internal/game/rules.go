@@ -14,7 +14,7 @@ func (t *Turn) CanPlace(card Card) bool {
 	return exists
 }
 
-func (g *Game) ValidateTurn(userID string, action Action, card *Card, pairIndex *int) (bool, Error) {
+func (g *Game) ValidateAction(userID string, action Action, card *Card, pairIndex *int) (bool, Error) {
 	t := g.Turn
 
 	// Take and Pass
@@ -54,7 +54,7 @@ func (g *Game) ValidateTurn(userID string, action Action, card *Card, pairIndex 
 			Message: "Action event is missing Card played",
 		}
 	}
-	if g.CardInHand(userID, *card) {
+	if !g.CardInHand(userID, *card) {
 		return false, Error{
 			Code:    "CARD_NOT_IN_HAND",
 			Message: "Selected card is not in players hand",

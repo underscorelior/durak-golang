@@ -355,7 +355,7 @@ func MakeAction(event Event, c *Client) error {
 		return fmt.Errorf("Bad payload in request: %v", err)
 	}
 
-	ok, gmErr := c.lobby.game.ValidateTurn(c.UserID, makeAction.Action, makeAction.Card, makeAction.PairIndex)
+	ok, gmErr := c.lobby.game.ValidateAction(c.UserID, makeAction.Action, makeAction.Card, makeAction.PairIndex)
 
 	if !ok {
 		var actionFailedMsg ActionFailedEvent
@@ -379,12 +379,15 @@ func MakeAction(event Event, c *Client) error {
 		return fmt.Errorf("Action Failed in MakeAction: %v\n", err)
 	}
 
+	c.lobby.game.MakeAction(c.UserID, makeAction.Action, makeAction.Card, makeAction.PairIndex)
+
 	var actionMadeMsg ActionMadeEvent
 
 	actionMadeMsg.UserID = c.UserID
 	actionMadeMsg.Action = makeAction.Action
-	actionMadeMsg.Card = *makeAction.Card
-	actionMadeMsg.PairIndex = *makeAction.PairIndex
+	actionMadeMsg.Phase = c.lobby.game.Turn.Phase
+	actionMadeMsg.Card = makeAction.Card
+	actionMadeMsg.PairIndex = makeAction.PairIndex
 
 	actionMadeData, err := json.Marshal(actionMadeMsg)
 
@@ -397,11 +400,7 @@ func MakeAction(event Event, c *Client) error {
 		Type:    EventActionMade,
 	}
 
-	ignored := ClientList{
-		c.UserID: c,
-	}
-
-	c.lobby.broadcast(actionMade, ignored)
+	c.lobby.broadcast(actionMade, ClientList{})
 
 	return nil
 
