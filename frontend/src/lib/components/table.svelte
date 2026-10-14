@@ -1,18 +1,23 @@
 <script lang="ts">
 	import { makeAction } from "$lib/event/actions";
 	import { globalState } from "$lib/state/state.svelte";
-	import { Action, shID } from "$lib/util";
+	import { shID } from "$lib/util";
+    import {Action, isAttacking, isDefending} from "$lib/game";
 	import Card from './card.svelte';
 	import Hand from "./hand.svelte";
 	import Opponent from "./opponent.svelte";
+	import Pair from "./pair.svelte";
 
     
-    let game = $derived(globalState.lobby?.game_state)
-    let card_pairs = $derived(globalState.lobby?.game_state?.turn.table_state)
+    let game_state = $derived(globalState.lobby?.game_state)
+
+
+    let card_pairs = $derived(game_state?.turn.table_state)
+    
     let pos = $derived(globalState.lobby?.position)
     let max_players = $derived(globalState.lobby?.max_players)
-    // FIXME: Allow for updating of the state, while keeping the typesafety (|| [] seems to break the reactivity)
-    let players = $derived(globalState.lobby?.game_state?.players || [])
+    
+    let players = $derived(game_state?.players ?? [])
 
     let game_started = $derived(globalState.lobby?.is_started)
 
@@ -32,10 +37,20 @@
         e.preventDefault(); 
         const card = JSON.parse(e.dataTransfer.getData('card'))
 
-        makeAction(Action.Attack, card, pair)
-    }
+        if (!card_pairs) {
+            return
+        }
 
-    
+        const atk_card = card_pairs[pair].attack_card
+
+        if (atk_card.rank != 0 || atk_card.suit != 0 && isDefending()) {
+            makeAction(Action.Defense, card, pair)
+        }
+        
+        if (atk_card.rank == 0 && atk_card.suit == 0 && isAttacking()) {
+            makeAction(Action.Attack, card, pair)
+        }
+    }
 </script>
 
 <div class="table">
@@ -47,11 +62,10 @@
     </div>
     <div class="tabletop">
 
-    {#if game_started}
-        {#each Array(6).keys() as pair (pair)}
-            <div class="card-pair" ondragover={dragover} ondrop={(e)=>drop(e, pair)} role="group">
-                {pair}
-                <Card card={card_pairs[pair]['attack_card']} draggable={false} />
+    {#if game_started && card_pairs}
+        {#each card_pairs as pair, i (i)}
+            <div class="card-pair" ondragover={dragover} ondrop={(e)=>drop(e, i)} role="group">
+                <Pair {pair} />
             </div>
         {/each}
     {/if}
@@ -72,9 +86,9 @@
 
     </div>
 
-    {#if game != undefined}
+    {#if game_state}
         <div class="deck">
-            <Card card={game.trump} draggable={false} />
+            <Card card={game_state.trump} draggable={false} />
         </div>
     {/if}
 </div>

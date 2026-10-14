@@ -69,7 +69,7 @@
     .rank-art {
         display: flex;
         grid-column: span 3;
-        background-color: aliceblue;
+        /* background-color: aliceblue; */
         text-align: center;
         justify-content: center;
         align-items: center;
