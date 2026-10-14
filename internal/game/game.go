@@ -231,10 +231,36 @@ func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *i
 	}
 
 	if action == Defense {
+		t.TableState[*pairIndex].DefenseCard = card
+		t.TableState[*pairIndex].IsDefended = true
+
+		g.players[userID].hand = g.PlayerHandWithoutCard(userID, *card)
+
+		g.Turn.Phase = ATTACK
+
 	}
 
 	if action == Attack {
+		t.TableState[*pairIndex].AttackCard = *card
+
+		g.players[userID].hand = g.PlayerHandWithoutCard(userID, *card)
+
+		g.Turn.Phase = DEFENSE
 	}
 
 	return nil
+}
+
+func (g *Game) PlayerHandWithoutCard(userID string, card Card) []Card {
+	hand := slices.Collect(func(yield func(Card) bool) {
+		for _, c := range g.players[userID].hand {
+			if c.Rank != card.Rank || c.Suit != card.Suit {
+				if !yield(c) {
+					return
+				}
+			}
+		}
+	})
+
+	return hand
 }

@@ -6,7 +6,9 @@ func (t *Turn) CanPlace(card Card) bool {
 
 	for _, pairs := range t.TableState {
 		rankSet[pairs.AttackCard.Rank] = true
-		rankSet[pairs.DefenseCard.Rank] = true
+		if pairs.IsDefended {
+			rankSet[pairs.DefenseCard.Rank] = true
+		}
 	}
 
 	_, exists := rankSet[card.Rank]

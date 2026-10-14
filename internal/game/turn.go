@@ -35,7 +35,7 @@ func (t *Turn) IsAttacker(playerID string) bool {
 
 // Checks if the player is the current defender
 func (t *Turn) IsDefender(playerID string) bool {
-	return playerID == t.InitialAttackerID
+	return playerID == t.DefenderID
 }
 
 // Checks if there is still capacity for another attack card

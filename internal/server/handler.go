@@ -376,7 +376,7 @@ func MakeAction(event Event, c *Client) error {
 
 		c.egress <- actionFailed
 
-		return fmt.Errorf("Action Failed in MakeAction: %v\n", err)
+		return fmt.Errorf("Action Failed in MakeAction: %v\n", gmErr)
 	}
 
 	c.lobby.game.MakeAction(c.UserID, makeAction.Action, makeAction.Card, makeAction.PairIndex)
