@@ -1,28 +1,69 @@
 <script lang="ts">
-	import { globalState } from "$lib/state/state.svelte";
+	import { globalState } from '$lib/state/state.svelte';
+	import { fanDistance, findGamePlayerByID, findLobbyPlayerByID, shID } from '$lib/util';
 	import Card from './card.svelte';
 
-    let game_state = $derived(globalState.lobby?.game_state)
+	const {
+		opponent,
+		user_id,
+		orientation
+	}: { opponent: boolean; user_id: string; orientation: number } = $props();
 
-    let hand = $derived(game_state?.hand);
-    let middle = $derived((hand?.length ?? 0)/2)
+	let game_state = $derived(globalState.lobby?.game_state);
+	let hand = $derived(game_state?.hand);
 
-    let attacking = $derived(game_state?.turn?.initial_attacker_id == globalState.user.user_id)
+	let game_started = $derived(globalState.lobby?.is_started);
+
+	let hand_size = $derived(findGamePlayerByID(user_id)?.hand_size ?? 0);
 </script>
 
-{#if game_state}
-    <div class="hand" style="--bg: {attacking? 'red':'aliceblue'}">
-        {#each hand as card, index (index)}
-            <Card {card} {index} {middle} />
-        {/each}
-    </div>
-{/if}
+<div style="--orientation: {orientation};" class="container">
+	<div class="nameplate">
+		{shID(user_id)} ({findLobbyPlayerByID(user_id)?.position})
+		<br />
+		{#if game_started}{hand_size}{/if}
+	</div>
+	{#if game_started}
+		<div class="hand">
+			{#if opponent}
+				{#each Array(hand_size).keys() as index (index)}
+					<Card
+						card={{ suit: 0, rank: 0 }}
+						{index}
+						distance={fanDistance(index, hand_size)}
+						inHand
+					/>
+				{/each}
+			{:else}
+				{#each hand as card, index (index)}
+					<Card {card} {index} distance={fanDistance(index, hand_size)} inHand />
+				{/each}
+			{/if}
+		</div>
+	{/if}
+</div>
 
 <style>
-    .hand {
-        display: flex;
-        flex-direction: row;
-        gap: 5px 5px;
-        background-color: var(--bg);
-    }
+	.container {
+		rotate: calc(var(--orientation) * 90deg);
+		margin-inline: auto;
+		width: 100%;
+		height: 100%;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.nameplate {
+		position: absolute;
+		background-color: rgba(25, 25, 25, 0.5);
+		color: aliceblue;
+		padding: 4px;
+		border-radius: 4px;
+		rotate: calc(var(--orientation) * -90deg);
+	}
+
+	.hand {
+		display: flex;
+		flex-direction: row;
+	}
 </style>

@@ -4,7 +4,7 @@ import type { EventPayloads, Events } from './events';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { clearLocalSession, setLocalSession } from '$lib/ws/connection';
-import { sortHand } from '$lib/util';
+import { findLobbyPlayerByID, sortHand } from '$lib/util';
 import { Action } from '$lib/game';
 
 export function connectionEstablishedHandler(payload: EventPayloads[Events.ConnectionEstablished]) {
@@ -69,7 +69,7 @@ export function playerLeftHandler(payload: EventPayloads[Events.PlayerLeft]) {
 }
 
 export function playerDisconnectedHandler(payload: EventPayloads[Events.PlayerDisconnected]) {
-	const disconnected = globalState.lobby?.players.find((p) => p.user_id === payload.user_id);
+	const disconnected = findLobbyPlayerByID(payload.user_id);
 
 	if (disconnected) {
 		disconnected.disconnected_at = payload.disconnected_at;
@@ -89,7 +89,7 @@ export function lobbyRejoinedHandler(payload: EventPayloads[Events.LobbyRejoined
 }
 
 export function playerRejoinedHandler(payload: EventPayloads[Events.PlayerRejoined]) {
-	const rejoined = globalState.lobby?.players.find((p) => p.user_id === payload.user_id);
+	const rejoined = findLobbyPlayerByID(payload.user_id);
 
 	if (rejoined) {
 		rejoined.is_connected = true;

@@ -1,3 +1,5 @@
+import { globalState } from './state/state.svelte';
+
 export const rankToString = [
 	'',
 	'A',
@@ -40,4 +42,22 @@ export function sortHand(hand?: Card[], sort: SortingPreference = 'rank-suit'): 
 
 export function shID(uuid: string | null = '') {
 	return (uuid || '').split('-')[0];
+}
+
+export function fanDistance(index: number, length: number) {
+	let dist = index - (length - 1) / 2;
+
+	if (length % 2 == 0) {
+		dist = dist < 0 ? dist - 1 : dist + 1;
+	}
+
+	return dist < 0 ? Math.ceil(dist) : Math.floor(dist);
+}
+
+export function findLobbyPlayerByID(user_id: string): Player | undefined {
+	return globalState.lobby?.players.find((p) => p.user_id === user_id);
+}
+
+export function findGamePlayerByID(user_id: string): GamePlayer | undefined {
+	return globalState.lobby?.game_state?.players.find((p) => p.user_id === user_id);
 }

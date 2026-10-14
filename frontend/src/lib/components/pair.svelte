@@ -28,8 +28,8 @@
     }
 
     .top-card {
-        position: relative;
-        top: 10%;
+        position: absolute;
+        top: 7%;
         left: 7%;
     }
 </style>
