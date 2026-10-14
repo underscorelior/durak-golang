@@ -4,7 +4,8 @@ import type { EventPayloads, Events } from './events';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { clearLocalSession, setLocalSession } from '$lib/ws/connection';
-import { Action, sortHand } from '$lib/util';
+import { sortHand } from '$lib/util';
+import { Action } from '$lib/game';
 
 export function connectionEstablishedHandler(payload: EventPayloads[Events.ConnectionEstablished]) {
 	globalState.user.name = payload.name;
@@ -115,26 +116,41 @@ export function gameStartedHandler(payload: EventPayloads[Events.GameStarted]) {
 }
 
 export function actionMadeHandler(payload: EventPayloads[Events.ActionMade]) {
-	if (!globalState.lobby || !globalState.lobby.game_state) {
+	const game_state = globalState.lobby?.game_state;
+
+	if (!game_state || !globalState.lobby?.game_state) {
 		alert('ERROR LOBBY OR GAME STATE NULL');
 		return;
 	}
-	const playerIndex = globalState.lobby?.game_state?.players.findIndex(
-		(gp) => gp.user_id == payload.user_id
-	);
+	const playerIndex = game_state.players.findIndex((gp) => gp.user_id == payload.user_id);
 
-	if (payload.action == Action.Attack && payload.pair_index && payload.card) {
-		globalState.lobby.game_state.players[playerIndex].hand_size -= 1;
-		globalState.lobby.game_state.turn.table_state[payload.pair_index].attack_card = payload.card;
+	const { user_id, action, turn_phase, card, pair_index } = payload;
 
-		if (payload.user_id == globalState.user.user_id) {
-			globalState.lobby.game_state.hand = globalState.lobby.game_state.hand.filter(
-				(card) => card.rank != payload.card?.rank || card.suit != payload.card?.suit
+	if ([Action.Attack, Action.Defense].includes(action) && pair_index && card) {
+		const pair = game_state.turn.table_state[pair_index];
+
+		if (!pair) {
+			alert("Couldn't find card pair for actionMade");
+		}
+
+		if (action == Action.Attack) {
+			pair.attack_card = card;
+		}
+
+		if (action == Action.Defense && pair_index != null && card) {
+			pair.defense_card = card;
+			pair.is_defended = true;
+		}
+
+		game_state.players[playerIndex].hand_size -= 1;
+		if (user_id == globalState.user.user_id) {
+			globalState.lobby.game_state.hand = game_state.hand.filter(
+				(c) => c.rank != card?.rank || c.suit != card?.suit
 			);
 		}
 	}
 
-	// globalState.lobby?.game_state.
+	game_state.turn.phase = turn_phase;
 }
 
 export function actionFailedHandler(payload: EventPayloads[Events.ActionFailed]) {
