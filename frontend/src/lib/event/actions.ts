@@ -1,4 +1,4 @@
-import type { Action } from '$lib/util';
+import type { Action } from '$lib/game';
 import { sendEvent } from '$lib/ws/connection';
 import { Events, type EventPayloads } from './events';
 

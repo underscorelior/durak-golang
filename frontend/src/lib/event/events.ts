@@ -1,4 +1,4 @@
-import type { Action } from '$lib/util';
+import type { Action, TurnPhase } from '$lib/game';
 
 export enum Events {
 	ConnectionEstablished = 'connection_established',

@@ -1,10 +1,3 @@
-export enum Action {
-	Defense = 0,
-	Attack,
-	Pass,
-	Take
-}
-
 export const rankToString = [
 	'',
 	'A',

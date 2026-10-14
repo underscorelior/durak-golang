@@ -10,7 +10,6 @@ type GlobalState = {
 			connected: boolean;
 		};
 	};
-	game: GameState | null;
 	lobby: Lobby | null;
 	session: Session | null;
 };
@@ -29,7 +28,6 @@ export const globalState = $state<GlobalState>({
 		lobbies: null,
 		connection: connectionState
 	},
-	game: null,
 	lobby: null,
 	session: null
 });

@@ -76,10 +76,3 @@ type Turn = {
 	attacker_ids: string[];
 	phase: TurnPhase;
 };
-
-enum TurnPhase {
-	Initial = 0,
-	Attack,
-	Defense,
-	Complete
-}
