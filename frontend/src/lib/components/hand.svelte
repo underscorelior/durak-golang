@@ -45,25 +45,35 @@
 
 <style>
 	.container {
-		rotate: calc(var(--orientation) * 90deg);
-		margin-inline: auto;
-		width: 100%;
-		height: 100%;
-		justify-content: center;
+		position: absolute;
+
+		display: flex;
+		flex-direction: column;
 		align-items: center;
+		justify-content: center;
+
+		width: max-content;
+		height: max-content;
+
+		rotate: calc(var(--orientation) * 90deg);
 	}
 
 	.nameplate {
 		position: absolute;
+		bottom: 100%;
+
 		background-color: rgba(25, 25, 25, 0.5);
 		color: aliceblue;
 		padding: 4px;
 		border-radius: 4px;
+
 		rotate: calc(var(--orientation) * -90deg);
 	}
 
 	.hand {
 		display: flex;
 		flex-direction: row;
+		align-items: center;
+		justify-content: center;
 	}
 </style>

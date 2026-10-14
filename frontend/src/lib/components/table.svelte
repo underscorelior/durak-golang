@@ -123,13 +123,17 @@
 	}
 
 	.player-box {
+		position: relative;
+
 		display: flex;
-		border: 1px solid black;
-		text-align: center;
-		width: 100%;
-		height: 100%;
 		align-items: center;
 		justify-content: center;
+
+		min-width: 0;
+		min-height: 0;
+
+		border: 1px solid black;
+		box-sizing: border-box;
 	}
 
 	#player-top {
