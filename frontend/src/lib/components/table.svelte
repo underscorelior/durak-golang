@@ -1,10 +1,20 @@
 <script lang="ts">
 	import { makeAction } from '$lib/event/actions';
 	import { globalState } from '$lib/state/state.svelte';
-	import { Action, isAttacking, isDefending } from '$lib/game';
+	import {
+		Action,
+		canAttack,
+		canDefend,
+		canPass,
+		canTake,
+		cardDefends,
+		isAttacking,
+		isDefending
+	} from '$lib/game';
 	import Card from './card.svelte';
 	import Pair from './pair.svelte';
 	import Hand from './hand.svelte';
+	import { isCardEmpty } from '$lib/util';
 
 	let game_state = $derived(globalState.lobby?.game_state);
 
@@ -25,6 +35,10 @@
 	let top = $derived(players.find((pl) => playerPosOffset(pl, 2)));
 	let right = $derived(players.find((pl) => playerPosOffset(pl, 3)));
 
+	let buttonDisabled = $derived(canPass() || canTake());
+	let buttonShown = $derived(isAttacking() || isDefending());
+	let buttonText = $derived(buttonShown ? (isAttacking() ? 'Pass' : 'Take') : '');
+
 	function dragover(e: DragEvent) {
 		e.preventDefault();
 		e.dataTransfer.dropEffect = 'move';
@@ -40,12 +54,24 @@
 
 		const atk_card = card_pairs[pair].attack_card;
 
-		if (atk_card.rank != 0 || (atk_card.suit != 0 && isDefending())) {
-			makeAction(Action.Defense, card, pair);
+		console.log('test', isCardEmpty(atk_card));
+
+		if (isCardEmpty(atk_card) && canAttack()) {
+			makeAction(Action.Attack, card, pair);
 		}
 
-		if (atk_card.rank == 0 && atk_card.suit == 0 && isAttacking()) {
-			makeAction(Action.Attack, card, pair);
+		if (!isCardEmpty(atk_card) && canDefend() && cardDefends(card_pairs[pair], card)) {
+			makeAction(Action.Defense, card, pair);
+		}
+	}
+
+	function buttonAction() {
+		if (isAttacking() && canPass()) {
+			makeAction(Action.Pass);
+		}
+
+		if (isDefending() && canTake()) {
+			makeAction(Action.Take);
 		}
 	}
 </script>
@@ -79,6 +105,16 @@
 		{#if player_id}
 			<Hand opponent={false} user_id={player_id} orientation={0} />
 		{/if}
+		{#if game_started}
+			<button
+				onclick={() => buttonAction()}
+				disabled={!buttonDisabled}
+				style={buttonShown ? '' : 'visibility: hidden;'}
+				class="action-button"
+			>
+				{buttonText}
+			</button>
+		{/if}
 	</div>
 
 	{#if game_state}
@@ -94,7 +130,7 @@
 		grid-template-columns: 0.75fr repeat(3, 1fr) 0.75fr;
 		grid-template-rows: 0.75fr repeat(3, 1fr) 0.75fr;
 		width: 70%;
-		aspect-ratio: 1.5;
+
 		gap: 1px 1px;
 		margin-inline: auto;
 	}
@@ -103,8 +139,6 @@
 		grid-column: span 3;
 		grid-row: span 3;
 		background-color: aliceblue;
-		width: 100%;
-		height: 100%;
 		border: 1px solid gray;
 
 		display: grid;
@@ -113,13 +147,22 @@
 	}
 
 	.card-pair {
-		border: 1px solid black;
+		/* border: 1px solid black; */
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.deck {
 		grid-column-start: 5;
 		grid-row-start: 5;
 		background-color: black;
+	}
+
+	.action-button {
+		position: absolute;
+		bottom: 0;
+		right: 0;
 	}
 
 	.player-box {

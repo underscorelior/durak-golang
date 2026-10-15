@@ -65,7 +65,7 @@ type Card = {
 
 type CardPair = {
 	attack_card: Card;
-	defense_card: Card;
+	defense_card?: Card;
 	is_defended: boolean;
 };
 

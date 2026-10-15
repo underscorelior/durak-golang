@@ -6,7 +6,6 @@
 	let lobbies = $derived(globalState.menu.lobbies);
 </script>
 
-
 <div class="lobby-list">
 	{#if lobbies === null}
 		<p>No Lobbies Found</p>
@@ -22,7 +21,6 @@
 </button>
 
 {JSON.stringify(connectionState)}
-
 
 <style>
 	.lobby-list {

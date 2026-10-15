@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { rankToString, suitToColor, suitToSymbol } from '$lib/util';
+	import { isCardEmpty, rankToString, suitToColor, suitToSymbol } from '$lib/util';
 
 	const {
 		card,
@@ -24,7 +24,7 @@
 	}
 </script>
 
-{#if card.rank != 0}
+{#if !isCardEmpty(card)}
 	<div
 		role="button"
 		tabindex="0"

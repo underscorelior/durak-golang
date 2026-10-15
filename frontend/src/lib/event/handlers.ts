@@ -86,6 +86,17 @@ export function rejoinLobbyFailedHandler(payload: EventPayloads[Events.RejoinLob
 
 export function lobbyRejoinedHandler(payload: EventPayloads[Events.LobbyRejoined]) {
 	globalState.lobby = payload.lobby;
+
+	globalState.lobby.game_state = {
+		...globalState.lobby.game_state,
+		hand: sortHand(globalState.lobby.game_state?.hand),
+		turn: {
+			...payload.lobby.game_state?.turn,
+			attacker_ids: Object.keys(
+				payload.lobby.game_state?.turn.attacker_ids as never as { [key: string]: boolean } // TODO: Fix this up so that it makes better sense, maybe a different way within golang itself
+			)
+		}
+	} as GameState; // TODO: Fix thsi?
 }
 
 export function playerRejoinedHandler(payload: EventPayloads[Events.PlayerRejoined]) {
