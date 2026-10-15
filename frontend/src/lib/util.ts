@@ -61,3 +61,7 @@ export function findLobbyPlayerByID(user_id: string): Player | undefined {
 export function findGamePlayerByID(user_id: string): GamePlayer | undefined {
 	return globalState.lobby?.game_state?.players.find((p) => p.user_id === user_id);
 }
+
+export function isCardEmpty(card: Card): boolean {
+	return card.rank == 0 && card.suit == 0;
+}
