@@ -264,7 +264,7 @@ func (l *Lobby) nextAvailablePosition() int {
 }
 
 func (l *Lobby) freePosition(pos int) error {
-	if pos < 0 && pos >= l.MaxPlayers {
+	if pos < 0 || pos >= l.MaxPlayers {
 		return fmt.Errorf("(freePosition) Position out of bounds")
 	}
 
@@ -274,7 +274,7 @@ func (l *Lobby) freePosition(pos int) error {
 }
 
 func (l *Lobby) usePosition(pos int) error {
-	if pos < 0 && pos >= l.MaxPlayers {
+	if pos < 0 || pos >= l.MaxPlayers {
 		return fmt.Errorf("(freePosition) Position out of bounds")
 	}
 
