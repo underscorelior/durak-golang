@@ -41,6 +41,7 @@ type ConnectionEstablishedPayload = {
 
 type MenuLobbiesUpdatedPayload = {
 	lobbies: LobbyPreview[];
+	next_update: Date; // TODO: IMPLEMENT A VISUAL TIMER, ALSO IMPLEMENT A FORCE REFRESH
 };
 
 type UpdateUserPayload = {

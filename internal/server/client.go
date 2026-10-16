@@ -13,8 +13,6 @@ var (
 	pongWait = 10 * time.Second // how long to wait for a pong response, if 10s is up, kick
 
 	pingInterval = (pongWait * 9) / 10 // Has to be lower than pongWait, this is the interval for the client to respond
-
-	menuLobbiesUpdatedInterval = 10 * time.Second // TODO: Or should this be sent as a request from the client in order to allow for a timer?
 )
 
 type ClientList map[string]*Client // UserID -> Client
@@ -83,7 +81,6 @@ func (c *Client) writeMessages() {
 	}()
 
 	pongTicker := time.NewTicker(pingInterval)
-	lobbyPreviewUpdateTicker := time.NewTicker(menuLobbiesUpdatedInterval)
 
 	for {
 		select {
@@ -107,22 +104,7 @@ func (c *Client) writeMessages() {
 			}
 			// fmt.Println(c.Name, "- Ping")
 
-		case <-lobbyPreviewUpdateTicker.C:
-			event, err := c.menuLobbiesUpdatedHandler()
-			if err != nil {
-				log.Println("Error in sending MenuLobbiesUpdated event")
-				return
-			}
-			if event == nil {
-				continue
-			}
-
-			if err := c.writeEvent(*event); err != nil {
-				log.Printf("failed to send message: %v", err)
-				return
-			}
 		}
-
 	}
 }
 
@@ -138,27 +120,4 @@ func (c *Client) writeEvent(event Event) error {
 func (c *Client) pongHandler(pongMsg string) error {
 	// fmt.Println(c.Name, "- Pong")
 	return c.connection.SetReadDeadline(time.Now().Add(pongWait))
-}
-
-func (c *Client) menuLobbiesUpdatedHandler() (*Event, error) {
-	if c.lobby != nil {
-		return nil, nil
-	}
-
-	var menuLobbiesUpdatedMsg MenuLobbiesUpdatedEvent
-
-	menuLobbiesUpdatedMsg.Lobbies = c.manager.MenuLobbies()
-
-	data, err := json.Marshal(menuLobbiesUpdatedMsg)
-	if err != nil {
-		log.Printf("Failed to marshal MenuLobbiesUpdated message: %v", err)
-		return nil, err
-	}
-
-	menuLobbiesUpdated := Event{
-		Payload: data,
-		Type:    EventMenuLobbiesUpdated,
-	}
-
-	return &menuLobbiesUpdated, nil
 }

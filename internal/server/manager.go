@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -145,6 +146,48 @@ func (m *Manager) removeClient(c *Client) {
 	if _, ok := m.clients[c.UserID]; ok {
 		c.connection.Close()
 		delete(m.clients, c.UserID)
+	}
+}
+
+func (m *Manager) broadcastMenuLobbyUpdates() {
+	menuLobbiesUpdatedInterval := 5 * time.Second
+	lobbyPreviewUpdateTicker := time.NewTicker(menuLobbiesUpdatedInterval)
+
+	defer func() {
+		log.Println("Broadcast of MenuLobbies stopped")
+		lobbyPreviewUpdateTicker.Stop()
+	}()
+
+	for range lobbyPreviewUpdateTicker.C {
+		sent := 0
+		var menuLobbiesUpdatedMsg MenuLobbiesUpdatedEvent
+
+		menuLobbiesUpdatedMsg.Lobbies = m.MenuLobbies()
+		menuLobbiesUpdatedMsg.NextUpdate = time.Now().Add(menuLobbiesUpdatedInterval)
+
+		data, err := json.Marshal(menuLobbiesUpdatedMsg)
+		if err != nil {
+			log.Printf("Failed to marshal MenuLobbiesUpdated message: %v", err)
+			continue
+		}
+
+		menuLobbiesUpdated := Event{
+			Payload: data,
+			Type:    EventMenuLobbiesUpdated,
+		}
+
+		for _, client := range m.clients {
+			if client.lobby == nil {
+				if err := client.writeEvent(menuLobbiesUpdated); err != nil {
+					log.Printf("failed to send message: %v", err)
+					continue
+				}
+				sent++
+			}
+		}
+
+		log.Printf("Broadcasted %v menus to %v clients\n", len(menuLobbiesUpdatedMsg.Lobbies), sent)
+
 	}
 }
 

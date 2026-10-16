@@ -54,7 +54,8 @@ type ConnectionEstablishedEvent struct {
 }
 
 type MenuLobbiesUpdatedEvent struct {
-	Lobbies []LobbyPreview `json:"lobbies"`
+	Lobbies    []LobbyPreview `json:"lobbies"`
+	NextUpdate time.Time      `json:"next_update"`
 }
 
 type UpdateUserEvent struct {
