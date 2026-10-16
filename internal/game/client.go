@@ -4,14 +4,16 @@ type GamePlayerState struct {
 	UserID   string `json:"user_id"`
 	HandSize int    `json:"hand_size"`
 	Position int    `json:"position"`
+	Passed   bool   `json:"passed"`
 }
 
 type GameStateSnapshot struct {
-	Players  []GamePlayerState `json:"players"`
-	Hand     []Card            `json:"hand"`
-	Trump    Card              `json:"trump"`
-	DeckSize int               `json:"deck_size"`
-	Turn     Turn              `json:"turn"`
+	Players      []GamePlayerState `json:"players"`
+	Hand         []Card            `json:"hand"`
+	Trump        Card              `json:"trump"`
+	DeckSize     int               `json:"deck_size"`
+	Turn         Turn              `json:"turn"`
+	FirstDefense bool              `json:"first_defense"`
 }
 
 func (g *Game) playerSnapshots() []GamePlayerState {
@@ -30,10 +32,11 @@ func (g *Game) playerSnapshots() []GamePlayerState {
 
 func (g *Game) StateFor(userID string) *GameStateSnapshot {
 	return &GameStateSnapshot{
-		Players:  g.playerSnapshots(),
-		Hand:     g.players[userID].hand,
-		Trump:    g.Trump,
-		DeckSize: g.DeckSize(),
-		Turn:     g.Turn,
+		Players:      g.playerSnapshots(),
+		Hand:         g.players[userID].hand,
+		Trump:        g.Trump,
+		DeckSize:     g.DeckSize(),
+		Turn:         g.Turn,
+		FirstDefense: g.FirstDefense,
 	}
 }

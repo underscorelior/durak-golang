@@ -1,5 +1,11 @@
 package game
 
+import (
+	"maps"
+	"slices"
+	"sort"
+)
+
 type Turn struct {
 	TableState        []CardPair `json:"table_state"`
 	DefenderID        string     `json:"defender_id"`
@@ -12,31 +18,21 @@ type Turn struct {
 type TurnPhase int
 
 const (
-	INITIAL = iota
-	ATTACK
-	DEFENSE
-	COMPLETE
+	TP_INITIAL  = iota // This represents the initial state of the round (initial attacker has yet to place first card, no one but initial attacker can attack)
+	TP_GAME            // This represents that the game is active (i.e. defender and attackers can make simultaneous actions)
+	TP_TAKE            // This represents when a defender either opts to take or cannot defend the attacks placed down, gives a small period where attackers can toss on additional cards
+	TP_DRAW            // All players that need to draw, draw up to 6 cards
+	TP_COMPLETE        // Represents a completed combat, about to go to a new inital state
 )
 
 type Action int
 
 const (
-	Defense = iota
-	Attack
-	Pass
-	Take
+	A_DEFENSE = iota
+	A_ATTACK
+	A_TAKE
+	A_PASS
 )
-
-// Checks if the player is a valid attacker
-func (t *Turn) IsAttacker(playerID string) bool {
-	_, exists := t.AttackerIDs[playerID]
-	return exists
-}
-
-// Checks if the player is the current defender
-func (t *Turn) IsDefender(playerID string) bool {
-	return playerID == t.DefenderID
-}
 
 // Checks if there is still capacity for another attack card
 func (t *Turn) TableIsFull() bool {
@@ -63,4 +59,53 @@ func (t *Turn) GetPlayedCards() []Card {
 	}
 
 	return cards
+}
+
+// TODO: Better name
+type PlayerOrder struct {
+	Next     string
+	Previous string
+}
+type TableOrder map[string]PlayerOrder
+
+func (g *Game) PlayerAtPosition(pos int) string {
+	for id, player := range g.players {
+		if player.Position == pos {
+			return id
+		}
+	}
+
+	return ""
+}
+
+func (g *Game) SetupTableOrder() {
+	numPlayers := len(g.players)
+	tableOrder := make(TableOrder, numPlayers)
+
+	players := g.players
+
+	keys := slices.Collect(maps.Keys(players))
+
+	sort.Slice(keys[:], func(i, j int) bool {
+		return players[keys[i]].Position < players[keys[j]].Position
+	})
+
+	for _, key := range keys {
+		pos := players[key].Position
+		tableOrder[key] = PlayerOrder{
+			Next:     g.PlayerAtPosition(calcPosOffset(pos, 1, numPlayers)),
+			Previous: g.PlayerAtPosition(calcPosOffset(pos, -1, numPlayers)),
+		}
+	}
+
+	g.Order = tableOrder
+}
+
+func (g *Game) AdjacentTo(userID string) map[string]bool {
+	o := g.Order[userID]
+	return map[string]bool{o.Next: true, o.Previous: true}
+}
+
+func calcPosOffset(pos, offset, num int) int {
+	return ((pos+offset)%num + num) % num
 }

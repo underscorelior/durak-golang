@@ -16,113 +16,196 @@ func (t *Turn) CanPlace(card Card) bool {
 	return exists
 }
 
-func (g *Game) ValidateAction(userID string, action Action, card *Card, pairIndex *int) (bool, Error) {
+func (g *Game) CanTake(userID string) (bool, Error) {
 	t := g.Turn
 
+	if userID == t.DefenderID {
+		return false, Error{
+			Code:    "INVALID_ROLE",
+			Message: "This user is not the defender",
+		}
+	}
+
+	if t.Phase != TP_GAME {
+		return false, Error{
+			Code:    "INVALID_PHASE",
+			Message: "Cannot take cards when game is not real-time",
+		}
+	}
+
+	return true, Error{}
+}
+
+func (g *Game) CanPass(userID string) (bool, Error) {
+	t := g.Turn
+
+	if _, exists := t.AttackerIDs[userID]; exists {
+		return false, Error{
+			Code:    "INVALID_ROLE",
+			Message: "This user is not an attacker",
+		}
+	}
+
+	if t.Phase != TP_GAME {
+		return false, Error{
+			Code:    "INVALID_PHASE",
+			Message: "Cannot pass turn when game is not real-time",
+		}
+	}
+
+	return true, Error{}
+}
+
+func (g *Game) CanDefend(userID string, card Card, cardPair CardPair) (bool, Error) {
+	t := g.Turn
+
+	if userID != t.DefenderID {
+		return false, Error{
+			Code:    "INVALID_ROLE",
+			Message: "This user is not the defender",
+		}
+	}
+
+	if t.Phase != TP_GAME {
+		return false, Error{
+			Code:    "INVALID_PHASE",
+			Message: "Cannot defend when game is not real-time",
+		}
+	}
+
+	if !cardPair.DefendedBy(card, g.Trump.Suit) {
+		return false, Error{
+			Code:    "INVALID_DEFENSE_CARD",
+			Message: "Provided defense card is unable to beat attack card",
+		}
+	}
+
+	return true, Error{}
+}
+
+func (g *Game) CanAttack(userID string, card Card) (bool, Error) {
+	t := g.Turn
+
+	if t.Phase == TP_INITIAL && userID == t.InitialAttackerID {
+		return true, Error{}
+	}
+
+	if _, exists := t.AttackerIDs[userID]; exists {
+		return false, Error{
+			Code:    "INVALID_ROLE",
+			Message: "This user is not an attacker",
+		}
+	}
+
+	if t.Phase != TP_GAME {
+		return false, Error{
+			Code:    "INVALID_PHASE",
+			Message: "Cannot attack when game is not real-time",
+		}
+	}
+
+	if t.TableIsFull() {
+		return false, Error{
+			Code:    "TABLE_FULL",
+			Message: "Unable to place additional attack card",
+		}
+	}
+
+	if !t.CanPlace(card) {
+		return false, Error{
+			Code:    "INVALID_CARD",
+			Message: "This card's rank is not placeable in the current conditions",
+		}
+	}
+
+	return true, Error{}
+}
+
+func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *int) (bool, Error) {
+	t := g.Turn
+	p := g.players[userID]
+
 	// Take and Pass
-	if action == Take {
-		if !t.IsDefender(userID) {
-			// Error message for this
-			return false, Error{
-				Code:    "INVALID_ROLE",
-				Message: "This user is not the defender",
-			}
+
+	// TAKE: Only DEFENDER during GAME phase
+	if action == A_TAKE {
+		ok, err := g.CanTake(userID)
+
+		if !ok {
+			return false, err
 		}
 
-		if t.Phase != DEFENSE {
-			return false, Error{
-				Code:    "INVALID_PHASE",
-				Message: "Cannot take cards when it's not the defender's action",
-			}
-		}
+		// START TIMER ALLOWING ATTACKERS TO THROW IN
+		// NEED A WAY TO ACCURATELY DISPLAY IT (SENDING TIMESTAMP AND ALLOWING CLIENT TO CALC HOW LONG IS LEFT?)
+		// ONCE TIME IS UP, MOVE CARDS TO PLAYER HAND
+		// p.hand = append(p.hand, t.GetPlayedCards()...)
 
 		return true, Error{}
 	}
 
-	// TODO: Passing
+	// PASS: Only ATTACKERs during GAME phase, PASS BY DEFAULT ONCE CANNOT ADD NEW CARDS
+	if action == A_PASS {
+		ok, err := g.CanPass(userID)
+
+		if !ok {
+			return false, err
+		}
+
+		p.Passed = true
+
+		return true, Error{}
+	}
 
 	// Defense and Attack
-	var cardPair CardPair
-
 	if pairIndex == nil {
 		return false, Error{
 			Code:    "MISSING_ARGUMENT",
-			Message: "Action event is missing CardPair index",
+			Message: "Action event missing CardPair index",
 		}
 	}
 	if card == nil {
 		return false, Error{
 			Code:    "MISSING_ARGUMENT",
-			Message: "Action event is missing Card played",
+			Message: "Action event missing Card played",
 		}
 	}
-	if !g.CardInHand(userID, *card) {
+
+	if !p.CardInHand(*card) {
 		return false, Error{
 			Code:    "CARD_NOT_IN_HAND",
-			Message: "Selected card is not in players hand",
+			Message: "Selected card not in players hand",
 		}
 	}
-	cardPair = t.TableState[*pairIndex]
 
-	// Defense:
-	if action == Defense {
-		if !t.IsDefender(userID) {
-			return false, Error{
-				Code:    "INVALID_ROLE",
-				Message: "This user is not the defender",
-			}
+	cp := t.TableState[*pairIndex]
+
+	// DEFENSE: Only the DEFENDER during GAME phase and CARD defends corresponding PAIR
+	if action == A_DEFENSE {
+		ok, err := g.CanDefend(userID, *card, cp)
+
+		if !ok {
+			return false, err
 		}
 
-		if t.Phase != DEFENSE {
-			return false, Error{
-				Code:    "INVALID_PHASE",
-				Message: "Cannot defend when it's not the defender's action",
-			}
-		}
+		cp.DefenseCard = card
+		cp.IsDefended = true
 
-		if !cardPair.DefendedBy(*card, g.Trump.Suit) {
-			return false, Error{
-				Code:    "INVALID_DEFENSE_CARD",
-				Message: "The provided defense card is unable to beat the attacking card",
-			}
-		}
+		p.hand = p.RemoveCard(*card)
 
 		return true, Error{}
 	}
 
-	// Attack:
-	if action == Attack {
-		if t.Phase == INITIAL && userID == t.InitialAttackerID {
-			return true, Error{}
+	// ATTACK: EITHER phase is INITIAL and user is the initial attacker OR phase is GAME and user is an ATTACKER and CARD is within valid pool
+	if action == A_ATTACK {
+		ok, err := g.CanAttack(userID, *card)
+
+		if !ok {
+			return false, err
 		}
 
-		if !t.IsAttacker(userID) {
-			return false, Error{
-				Code:    "INVALID_ROLE",
-				Message: "This user is not an attacker",
-			}
-		}
+		cp.AttackCard = *card
 
-		if t.Phase != ATTACK {
-			return false, Error{
-				Code:    "INVALID_PHASE",
-				Message: "Cannot attack when it's not the attacker's action",
-			}
-		}
-
-		if t.TableIsFull() {
-			return false, Error{
-				Code:    "TABLE_FULL",
-				Message: "Unable to place additional attack card",
-			}
-		}
-
-		if !t.CanPlace(*card) {
-			return false, Error{
-				Code:    "INVALID_CARD",
-				Message: "This card's rank is not placeable in the current conditions",
-			}
-		}
+		p.hand = p.RemoveCard(*card)
 
 		return true, Error{}
 	}

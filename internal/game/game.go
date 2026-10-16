@@ -1,23 +1,15 @@
 package game
 
 import (
-	"maps"
 	"math"
 	"math/rand/v2"
 	"slices"
-	"sort"
 )
-
-// TODO: Better name
-type PlayerOrder struct {
-	Next     string
-	Previous string
-}
-type TableOrder map[string]PlayerOrder
 
 type PlayerState struct {
 	hand     []Card
 	Position int
+	Passed   bool
 }
 
 type Game struct {
@@ -27,6 +19,8 @@ type Game struct {
 	Order TableOrder
 	Trump Card
 	Turn  Turn
+
+	FirstDefense bool
 }
 
 type Error struct {
@@ -91,44 +85,6 @@ func (g *Game) FindPlayerWithLowestTrumpCardInHand() string {
 	return ""
 }
 
-func (g *Game) PlayerAtPosition(pos int) string {
-	for id, player := range g.players {
-		if player.Position == pos {
-			return id
-		}
-	}
-
-	return ""
-}
-
-func (g *Game) SetupTableOrder() {
-	numPlayers := len(g.players)
-	tableOrder := make(TableOrder, numPlayers)
-
-	players := g.players
-
-	keys := slices.Collect(maps.Keys(players))
-
-	sort.Slice(keys[:], func(i, j int) bool {
-		return players[keys[i]].Position < players[keys[j]].Position
-	})
-
-	for _, key := range keys {
-		pos := players[key].Position
-		tableOrder[key] = PlayerOrder{
-			Next:     g.PlayerAtPosition(calcPosOffset(pos, 1, numPlayers)),
-			Previous: g.PlayerAtPosition(calcPosOffset(pos, -1, numPlayers)),
-		}
-	}
-
-	g.Order = tableOrder
-}
-
-func (g *Game) AdjacentTo(userID string) map[string]bool {
-	o := g.Order[userID]
-	return map[string]bool{o.Next: true, o.Previous: true}
-}
-
 func (g *Game) StartNextTurn(initial bool, skipDefender bool) {
 	var initialAttacker string
 
@@ -148,7 +104,7 @@ func (g *Game) StartNextTurn(initial bool, skipDefender bool) {
 		InitialAttackerID: initialAttacker,
 		AttackerIDs:       g.AdjacentTo(defender),
 
-		Phase: INITIAL,
+		Phase: TP_INITIAL,
 	}
 
 	g.Turn = turn
@@ -180,18 +136,12 @@ func (g *Game) DeckSize() int {
 	return len(g.deck)
 }
 
-func calcPosOffset(pos, offset, num int) int {
-	return ((pos+offset)%num + num) % num
-}
-
-func (g *Game) CardInHand(userID string, card Card) bool {
-	return slices.Contains(g.players[userID].hand, card)
-}
-
 // Draws specified number of cards into player's hand. Returns a boolean representing if any more cards can be drawn.
 func (g *Game) DrawCards(userID string, amount int) bool {
+	p := g.players[userID]
+
 	for range max(amount, 0) {
-		g.players[userID].hand = append(g.players[userID].hand, g.deck[0])
+		p.hand = append(p.hand, g.deck[0])
 		g.deck = g.deck[1:]
 
 		// TODO: NEED TO ACCOUNT FOR TRUMP CARD
@@ -217,43 +167,9 @@ func (g *Game) DistributeCards() {
 	g.DrawCards(g.Turn.DefenderID, 6-len(g.players[g.Turn.DefenderID].hand))
 }
 
-func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *int) error {
-	t := g.Turn
-
-	if action == Take {
-		g.players[userID].hand = append(g.players[userID].hand, t.GetPlayedCards()...)
-
-		g.DistributeCards()
-		g.StartNextTurn(false, true)
-	}
-
-	if action == Pass {
-	}
-
-	if action == Defense {
-		t.TableState[*pairIndex].DefenseCard = card
-		t.TableState[*pairIndex].IsDefended = true
-
-		g.players[userID].hand = g.PlayerHandWithoutCard(userID, *card)
-
-		g.Turn.Phase = ATTACK
-
-	}
-
-	if action == Attack {
-		t.TableState[*pairIndex].AttackCard = *card
-
-		g.players[userID].hand = g.PlayerHandWithoutCard(userID, *card)
-
-		g.Turn.Phase = DEFENSE
-	}
-
-	return nil
-}
-
-func (g *Game) PlayerHandWithoutCard(userID string, card Card) []Card {
+func (p *PlayerState) RemoveCard(card Card) []Card {
 	hand := slices.Collect(func(yield func(Card) bool) {
-		for _, c := range g.players[userID].hand {
+		for _, c := range p.hand {
 			if c.Rank != card.Rank || c.Suit != card.Suit {
 				if !yield(c) {
 					return
@@ -263,4 +179,8 @@ func (g *Game) PlayerHandWithoutCard(userID string, card Card) []Card {
 	})
 
 	return hand
+}
+
+func (p *PlayerState) CardInHand(card Card) bool {
+	return slices.Contains(p.hand, card)
 }

@@ -355,7 +355,7 @@ func MakeAction(event Event, c *Client) error {
 		return fmt.Errorf("Bad payload in request: %v", err)
 	}
 
-	ok, gmErr := c.lobby.game.ValidateAction(c.UserID, makeAction.Action, makeAction.Card, makeAction.PairIndex)
+	ok, gmErr := c.lobby.game.MakeAction(c.UserID, makeAction.Action, makeAction.Card, makeAction.PairIndex)
 
 	if !ok {
 		var actionFailedMsg ActionFailedEvent
@@ -378,8 +378,6 @@ func MakeAction(event Event, c *Client) error {
 
 		return fmt.Errorf("Action Failed in MakeAction: %v\n", gmErr)
 	}
-
-	c.lobby.game.MakeAction(c.UserID, makeAction.Action, makeAction.Card, makeAction.PairIndex)
 
 	var actionMadeMsg ActionMadeEvent
 
