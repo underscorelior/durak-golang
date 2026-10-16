@@ -82,6 +82,11 @@ func JoinLobby(event Event, c *Client) error {
 		return nil // I dont think this should be nil
 	}
 
+	if lobby.InGame {
+		// TODO: Error on attempting to join while active game
+		return nil
+	}
+
 	if len(lobby.players) >= int(lobby.MaxPlayers) {
 		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_full", fmt.Sprintf("Lobby is full (Max %v)", lobby.MaxPlayers), EventJoinLobbyFailed)
 
@@ -104,10 +109,8 @@ func JoinLobby(event Event, c *Client) error {
 		return nil // I dont think this should be nil
 	}
 
-	c.lobby = lobby
-
 	pos := lobby.nextAvailablePosition()
-	if pos == -1 {
+	if err := lobby.usePosition(pos); err != nil {
 		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_no_valid_position", "There was an issue finding a valid position", EventJoinLobbyFailed)
 
 		if err != nil {
@@ -118,10 +121,12 @@ func JoinLobby(event Event, c *Client) error {
 		return nil // I dont think this should be nil
 	}
 
+	c.lobby = lobby
+
 	p := &Player{
 		UserID:      c.UserID,
 		Name:        c.Name,
-		Position:    lobby.usePosition(pos),
+		Position:    pos,
 		JoinedAt:    time.Now(),
 		IsConnected: true,
 	}
@@ -187,6 +192,11 @@ func createLobbyFailedEvent(lobbyCode, code, message, evtType string) (Event, er
 func LeaveLobby(event Event, c *Client) error {
 	lobby := c.lobby
 
+	if lobby == nil {
+		// TODO: Probably send the client a message...
+		return fmt.Errorf("Cant leave lobby when not in lobby.")
+	}
+
 	if err := lobby.removeClient(c); err != nil {
 		log.Println(err)
 		return err
@@ -214,8 +224,23 @@ func LeaveLobby(event Event, c *Client) error {
 func StartGame(event Event, c *Client) error {
 	l := c.lobby
 
+	if l == nil {
+		// TODO: Probably send the client a message...
+		return fmt.Errorf("Cant start game when not in lobby.")
+	}
+
 	if c.UserID != l.HostID {
 		// TODO: Return some sort of Error event
+		return nil
+	}
+
+	if l.InGame {
+		// TODO: cant start if already playing, need to return some sort of error
+		return nil
+	}
+
+	if len(l.players) <= 1 {
+		// TODO: Cant start if no more than 1 player
 		return nil
 	}
 
@@ -226,14 +251,14 @@ func StartGame(event Event, c *Client) error {
 	}
 
 	l.game = game.InitializeGame(gamePlayers)
-	l.IsPlaying = true
+	l.InGame = true
 
 	var gameStartedMsg GameStartedEvent
 	gameStartedMsg.Lobby = l.Snapshot()
 
 	l.GenerateSessions()
 
-	for _, cl := range c.lobby.clients {
+	for _, cl := range l.clients {
 		gameStartedMsg.Lobby.Position = l.players[cl.UserID].Position
 		gameStartedMsg.Lobby.GameState = l.game.StateFor(cl.UserID)
 		gameStartedMsg.Session = l.players[cl.UserID].session
@@ -305,6 +330,10 @@ func RejoinLobby(event Event, c *Client) error {
 	c.lobby = lobby
 	p := lobby.players[c.UserID]
 
+	if p == nil {
+		return fmt.Errorf("Failed to locate player")
+	}
+
 	p.IsConnected = true
 
 	lobby.addClient(c, p)
@@ -349,6 +378,14 @@ func RejoinLobby(event Event, c *Client) error {
 }
 
 func MakeAction(event Event, c *Client) error {
+	if c.lobby == nil {
+		return fmt.Errorf("Cant make action when not in lobby")
+	}
+
+	if c.lobby.game == nil {
+		return fmt.Errorf("Cant make an action when there is no active game")
+	}
+
 	var makeAction MakeActionEvent
 
 	if err := json.Unmarshal(event.Payload, &makeAction); err != nil {
@@ -401,5 +438,4 @@ func MakeAction(event Event, c *Client) error {
 	c.lobby.broadcast(actionMade, ClientList{})
 
 	return nil
-
 }

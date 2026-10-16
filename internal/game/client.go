@@ -31,6 +31,13 @@ func (g *Game) playerSnapshots() []GamePlayerState {
 }
 
 func (g *Game) StateFor(userID string) *GameStateSnapshot {
+	_, ok := g.players[userID]
+
+	if !ok {
+		// TODO: THROW ERROR HERE!!!
+		return &GameStateSnapshot{}
+	}
+
 	return &GameStateSnapshot{
 		Players:      g.playerSnapshots(),
 		Hand:         g.players[userID].hand,

@@ -71,6 +71,7 @@ func (c *Client) readMessages() {
 
 		if err := c.manager.routeEvent(request, c); err != nil {
 			log.Println("Error handling message: ", err)
+			// TODO: SEND THE ERRORS TO THE CLIENT
 		}
 	}
 }

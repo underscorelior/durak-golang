@@ -50,13 +50,12 @@ type Card struct {
 // TODO: Dfiferentiate card by user who played it
 type CardPair struct {
 	AttackCard  Card  `json:"attack_card,omitempty"`
-	DefenseCard *Card `json:"defense_card,omitempty"`
-	IsDefended  bool  `json:"is_defended,omitempty"`
+	DefenseCard *Card `json:"defense_card,omitempty"` // TODO: Should we stop doing the pointer, it shouldnt really be optional...
 }
 
 // Can the defense Card beat the attack Card, checks Trump supremacy too
 func (cp *CardPair) DefendedBy(defense Card, trumpSuit Suit) bool {
-	if cp.IsDefended {
+	if cp.DefenseCard != nil && !cp.IsOccupied() {
 		return false
 	}
 
@@ -72,5 +71,9 @@ func (cp *CardPair) DefendedBy(defense Card, trumpSuit Suit) bool {
 }
 
 func (cp *CardPair) IsOccupied() bool {
-	return cp.AttackCard.Rank != 0 && cp.AttackCard.Suit != 0 // FIXME: Need a better check than this.
+	return cp.AttackCard.Rank != 0 || cp.AttackCard.Suit != 0
+}
+
+func (c *Card) isEmpty() bool {
+	return c.Rank != 0 || c.Suit != 0
 }

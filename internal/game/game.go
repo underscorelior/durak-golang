@@ -1,6 +1,7 @@
 package game
 
 import (
+	"maps"
 	"math"
 	"math/rand/v2"
 	"slices"
@@ -51,12 +52,11 @@ func (g *Game) ShuffleDeck() {
 // Deals cards to the Players in the game, removes those cards from the deck
 func (g *Game) DealCards() {
 	for i := range g.players {
-		g.players[i].hand = g.deck[:6] // TODO: Fix magic number : 6
+		g.players[i].hand = slices.Clone(g.deck[:6]) // TODO: Fix magic number : 6
 		g.deck = g.deck[6:]
 	}
-}
+} // TODO: Make a test that covers when two pplayers deal and then draw to the first player's hand then ensure that the second player's hand is unchanged (ensuring that the data is a copy and not a reference)
 
-// FIXME: Lmfao wtf is this name
 func (g *Game) FindPlayerWithLowestTrumpCardInHand() string {
 	lowestID := ""
 	lowestRank := Rank(math.MaxInt)
@@ -66,7 +66,7 @@ func (g *Game) FindPlayerWithLowestTrumpCardInHand() string {
 	for id, player := range g.players {
 		for _, card := range player.hand {
 			if card.Suit == trump.Suit {
-				if card.Rank == 6 || trump.Rank == 6 && card.Rank == 7 { // TODO: Instead of 6, we need to be able to get the lowest possible card for this optimization
+				if card.Rank == 6 || trump.Rank == 6 && card.Rank == 7 {
 					return id
 				}
 				if lowestRank > card.Rank {
@@ -81,8 +81,8 @@ func (g *Game) FindPlayerWithLowestTrumpCardInHand() string {
 		return lowestID
 	}
 
-	// TODO: Pick random player
-	return ""
+	i := rand.IntN(len(g.players))
+	return slices.Collect(maps.Keys(g.players))[i]
 }
 
 func (g *Game) StartNextTurn(initial bool, skipDefender bool) {
@@ -123,7 +123,8 @@ func InitializeGame(players map[string]struct{ Position int }) *Game {
 	g.ShuffleDeck()
 
 	g.DealCards()
-	g.Trump, g.deck = g.deck[0], g.deck[1:]
+	g.Trump = g.deck[0]
+	g.deck = append(g.deck[1:], g.Trump)
 
 	g.SetupTableOrder()
 
@@ -139,6 +140,11 @@ func (g *Game) DeckSize() int {
 // Draws specified number of cards into player's hand. Returns a boolean representing if any more cards can be drawn.
 func (g *Game) DrawCards(userID string, amount int) bool {
 	p := g.players[userID]
+
+	if p == nil {
+		// TODO: Some sort of error handling
+		return true
+	}
 
 	for range max(amount, 0) {
 		p.hand = append(p.hand, g.deck[0])

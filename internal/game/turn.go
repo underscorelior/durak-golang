@@ -52,10 +52,17 @@ func (t *Turn) GetPairFromIndex(index int) CardPair {
 }
 
 func (t *Turn) GetPlayedCards() []Card {
-	cards := make([]Card, 12)
+	var cards []Card
 
 	for _, pair := range t.TableState {
-		cards = append(cards, pair.AttackCard, *pair.DefenseCard)
+		if !pair.IsOccupied() {
+			continue
+		}
+
+		cards = append(cards, pair.AttackCard)
+		if pair.DefenseCard != nil && !pair.DefenseCard.isEmpty() {
+			cards = append(cards, *pair.DefenseCard)
+		}
 	}
 
 	return cards
@@ -78,6 +85,7 @@ func (g *Game) PlayerAtPosition(pos int) string {
 	return ""
 }
 
+// TODO: Account for gaps in position
 func (g *Game) SetupTableOrder() {
 	numPlayers := len(g.players)
 	tableOrder := make(TableOrder, numPlayers)

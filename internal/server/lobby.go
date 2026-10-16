@@ -34,8 +34,8 @@ type Lobby struct {
 	sync.RWMutex
 
 	MaxPlayers int
-	IsPrivate  bool
-	IsPlaying  bool
+	IsHidden   bool
+	InGame     bool
 	positions  []bool
 	CreatedAt  time.Time
 
@@ -51,8 +51,8 @@ type Lobby struct {
 type LobbySnapshot struct {
 	LobbyCode  string    `json:"lobby_code"`
 	HostID     string    `json:"host_id"`
-	IsPrivate  bool      `json:"is_private"`
-	IsStarted  bool      `json:"is_started"`
+	IsHidden   bool      `json:"is_hidden"`
+	InGame     bool      `json:"in_game"`
 	MaxPlayers int       `json:"max_players"`
 	CreatedAt  time.Time `json:"created_at"`
 
@@ -69,8 +69,8 @@ type LobbyPreview struct {
 	MaxPlayers  int       `json:"max_players"`
 	CreatedAt   time.Time `json:"created_at"`
 
-	IsOpen    bool `json:"is_open"` // TODO: Need to allow user to join once started if they have a rejoin session token
-	IsPlaying bool `json:"is_playing"`
+	IsOpen bool `json:"is_open"` // TODO: Need to allow user to join once started if they have a rejoin session token
+	InGame bool `json:"in_game"`
 }
 
 type Session struct {
@@ -82,8 +82,8 @@ func (m *Manager) NewLobby(userID string) *Lobby {
 	l := &Lobby{
 		LobbyCode:  m.GenerateLobbyCode(5),
 		MaxPlayers: 4,
-		IsPrivate:  false,
-		IsPlaying:  false,
+		IsHidden:   false,
+		InGame:     false,
 		HostID:     userID,
 		CreatedAt:  time.Now(),
 
@@ -118,14 +118,14 @@ func (m *Manager) MenuLobbies() []LobbyPreview {
 
 	for lobbyCode := range m.lobbies {
 		l := m.lobbies[lobbyCode]
-		if l.IsPrivate {
+		if l.IsHidden {
 			continue
 		}
 
 		pc := len(l.players)
 
 		// TODO: Find a better definition of "isOpen"
-		isOpen := pc < l.MaxPlayers
+		isOpen := pc < l.MaxPlayers && !l.InGame
 
 		host, ok := l.players[l.HostID]
 		hostName := "N/A"
@@ -141,8 +141,8 @@ func (m *Manager) MenuLobbies() []LobbyPreview {
 			MaxPlayers:  l.MaxPlayers,
 			CreatedAt:   l.CreatedAt,
 
-			IsOpen:    isOpen,
-			IsPlaying: l.IsPlaying,
+			IsOpen: isOpen,
+			InGame: l.InGame,
 		}
 
 		lobbies = append(lobbies, lobbyPreview)
@@ -172,8 +172,12 @@ func (l *Lobby) removeClient(c *Client) error {
 		return fmt.Errorf("(removeClient) Cannot find player with UserID: %s", c.UserID)
 	}
 
-	if !l.IsPlaying {
-		l.freePosition(p.Position)
+	if !l.InGame {
+		err := l.freePosition(p.Position)
+
+		if err != nil {
+			return fmt.Errorf("(removeClient) Cant free position: %s", err)
+		}
 
 		c.lobby = nil
 
@@ -259,13 +263,23 @@ func (l *Lobby) nextAvailablePosition() int {
 	return -1
 }
 
-func (l *Lobby) freePosition(pos int) {
+func (l *Lobby) freePosition(pos int) error {
+	if pos < 0 && pos >= l.MaxPlayers {
+		return fmt.Errorf("(freePosition) Position out of bounds")
+	}
+
 	l.positions[pos] = false
+
+	return nil
 }
 
-func (l *Lobby) usePosition(pos int) int {
+func (l *Lobby) usePosition(pos int) error {
+	if pos < 0 && pos >= l.MaxPlayers {
+		return fmt.Errorf("(freePosition) Position out of bounds")
+	}
+
 	l.positions[pos] = true
-	return pos
+	return nil
 }
 
 func (l *Lobby) Snapshot() LobbySnapshot {
@@ -275,17 +289,23 @@ func (l *Lobby) Snapshot() LobbySnapshot {
 		Players:    l.playerSnapshots(),
 		MaxPlayers: l.MaxPlayers,
 		CreatedAt:  l.CreatedAt,
-		IsPrivate:  l.IsPrivate,
-		IsStarted:  l.IsPlaying,
+		IsHidden:   l.IsHidden,
+		InGame:     l.InGame,
 	}
 
 	return snapshot
 }
 
 func (l *Lobby) SnapshotFor(c *Client) LobbySnapshot {
+	p := l.players[c.UserID]
+
+	if p == nil {
+		// TODO: ERROR HANDLING
+		return LobbySnapshot{}
+	}
 
 	snapshot := l.Snapshot()
-	snapshot.Position = l.players[c.UserID].Position
+	snapshot.Position = p.Position
 
 	if l.game != nil {
 		snapshot.GameState = l.game.StateFor(c.UserID)

@@ -6,7 +6,7 @@ func (t *Turn) CanPlace(card Card) bool {
 
 	for _, pairs := range t.TableState {
 		rankSet[pairs.AttackCard.Rank] = true
-		if pairs.IsDefended {
+		if pairs.DefenseCard != nil {
 			rankSet[pairs.DefenseCard.Rank] = true
 		}
 	}
@@ -19,7 +19,7 @@ func (t *Turn) CanPlace(card Card) bool {
 func (g *Game) CanTake(userID string) (bool, Error) {
 	t := g.Turn
 
-	if userID == t.DefenderID {
+	if userID != t.DefenderID {
 		return false, Error{
 			Code:    "INVALID_ROLE",
 			Message: "This user is not the defender",
@@ -39,7 +39,7 @@ func (g *Game) CanTake(userID string) (bool, Error) {
 func (g *Game) CanPass(userID string) (bool, Error) {
 	t := g.Turn
 
-	if _, exists := t.AttackerIDs[userID]; exists {
+	if _, exists := t.AttackerIDs[userID]; !exists {
 		return false, Error{
 			Code:    "INVALID_ROLE",
 			Message: "This user is not an attacker",
@@ -73,6 +73,13 @@ func (g *Game) CanDefend(userID string, card Card, cardPair CardPair) (bool, Err
 		}
 	}
 
+	if cardPair.DefenseCard != nil {
+		return false, Error{
+			Code:    "OCCUPIED_PAIR",
+			Message: "This card pair has already been defended",
+		}
+	}
+
 	if !cardPair.DefendedBy(card, g.Trump.Suit) {
 		return false, Error{
 			Code:    "INVALID_DEFENSE_CARD",
@@ -83,14 +90,14 @@ func (g *Game) CanDefend(userID string, card Card, cardPair CardPair) (bool, Err
 	return true, Error{}
 }
 
-func (g *Game) CanAttack(userID string, card Card) (bool, Error) {
+func (g *Game) CanAttack(userID string, card Card, pairIndex int) (bool, Error) {
 	t := g.Turn
 
 	if t.Phase == TP_INITIAL && userID == t.InitialAttackerID {
 		return true, Error{}
 	}
 
-	if _, exists := t.AttackerIDs[userID]; exists {
+	if _, exists := t.AttackerIDs[userID]; !exists {
 		return false, Error{
 			Code:    "INVALID_ROLE",
 			Message: "This user is not an attacker",
@@ -118,12 +125,26 @@ func (g *Game) CanAttack(userID string, card Card) (bool, Error) {
 		}
 	}
 
+	if g.Turn.TableState[pairIndex].IsOccupied() {
+		return false, Error{
+			Code:    "OCCUPIED_PAIR",
+			Message: "This card pair already contains an attack card",
+		}
+	}
+
 	return true, Error{}
 }
 
 func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *int) (bool, Error) {
 	t := g.Turn
 	p := g.players[userID]
+
+	if p == nil {
+		return false, Error{
+			Code:    "INVALID_USER",
+			Message: "Provided user ID is not in the game",
+		}
+	}
 
 	// Take and Pass
 
@@ -177,6 +198,13 @@ func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *i
 		}
 	}
 
+	if *pairIndex < 0 || *pairIndex > 5 {
+		return false, Error{
+			Code:    "INVALID_RANGE",
+			Message: "Provided index not within range",
+		}
+	}
+
 	cp := t.TableState[*pairIndex]
 
 	// DEFENSE: Only the DEFENDER during GAME phase and CARD defends corresponding PAIR
@@ -187,8 +215,7 @@ func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *i
 			return false, err
 		}
 
-		cp.DefenseCard = card
-		cp.IsDefended = true
+		g.Turn.TableState[*pairIndex].DefenseCard = card
 
 		p.hand = p.RemoveCard(*card)
 
@@ -197,13 +224,13 @@ func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *i
 
 	// ATTACK: EITHER phase is INITIAL and user is the initial attacker OR phase is GAME and user is an ATTACKER and CARD is within valid pool
 	if action == A_ATTACK {
-		ok, err := g.CanAttack(userID, *card)
+		ok, err := g.CanAttack(userID, *card, *pairIndex)
 
 		if !ok {
 			return false, err
 		}
 
-		cp.AttackCard = *card
+		g.Turn.TableState[*pairIndex].AttackCard = *card
 
 		p.hand = p.RemoveCard(*card)
 
