@@ -72,14 +72,10 @@ func JoinLobby(event Event, c *Client) error {
 	lobby, ok := c.manager.lobbies[joinLobbyEvent.LobbyCode]
 
 	if !ok {
-		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_not_found", "Lobby does not exist", EventJoinLobbyFailed)
-
-		if err != nil {
-			return err
+		return ClientError{
+			Code:    "LOBBY_NOT_FOUND",
+			Message: fmt.Sprintf("Lobby (%v) does not exist", joinLobbyEvent.LobbyCode),
 		}
-
-		c.egress <- joinLobbyFailed
-		return nil // I dont think this should be nil
 	}
 
 	if lobby.InGame {
@@ -88,37 +84,25 @@ func JoinLobby(event Event, c *Client) error {
 	}
 
 	if len(lobby.players) >= int(lobby.MaxPlayers) {
-		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_full", fmt.Sprintf("Lobby is full (Max %v)", lobby.MaxPlayers), EventJoinLobbyFailed)
-
-		if err != nil {
-			return err
+		return ClientError{
+			Code:    "LOBBY_FULL",
+			Message: fmt.Sprintf("Lobby is full (Max %v)", lobby.MaxPlayers),
 		}
-
-		c.egress <- joinLobbyFailed
-		return nil // I dont think this should be nil
 	}
 
 	if _, ok := lobby.clients[c.UserID]; ok {
-		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_duplicate_player", "Lobby contains a player with the same UserID as you", EventJoinLobbyFailed)
-
-		if err != nil {
-			return err
+		return ClientError{
+			Code:    "LOBBY_DUPLICATE_PLAYER",
+			Message: "Lobby contains a player with the same UserID as you",
 		}
-
-		c.egress <- joinLobbyFailed
-		return nil // I dont think this should be nil
 	}
 
 	pos := lobby.nextAvailablePosition()
 	if err := lobby.usePosition(pos); err != nil {
-		joinLobbyFailed, err := createLobbyFailedEvent(joinLobbyEvent.LobbyCode, "lobby_no_valid_position", "There was an issue finding a valid position", EventJoinLobbyFailed)
-
-		if err != nil {
-			return err
+		return ClientError{
+			Code:    "LOBBY_NO_VALID_POSITION",
+			Message: "There was an issue finding a valid position",
 		}
-
-		c.egress <- joinLobbyFailed
-		return nil // I dont think this should be nil
 	}
 
 	c.lobby = lobby
@@ -171,30 +155,15 @@ func JoinLobby(event Event, c *Client) error {
 	return nil
 }
 
-func createLobbyFailedEvent(lobbyCode, code, message, evtType string) (Event, error) {
-	var joinLobbyFailedMsg LobbyFailedEvent
-
-	joinLobbyFailedMsg.Code = code
-	joinLobbyFailedMsg.Message = message
-	joinLobbyFailedMsg.LobbyCode = lobbyCode
-
-	data, err := json.Marshal(joinLobbyFailedMsg)
-	if err != nil {
-		return Event{}, fmt.Errorf("Failed to marshal JoinLobbyFailed message: %v", err)
-	}
-
-	return Event{
-		Payload: data,
-		Type:    evtType,
-	}, nil
-}
-
 func LeaveLobby(event Event, c *Client) error {
 	lobby := c.lobby
 
 	if lobby == nil {
 		// TODO: Probably send the client a message...
-		return fmt.Errorf("Cant leave lobby when not in lobby.")
+		return ClientError{
+			Code:    "NOT_IN_LOBBY",
+			Message: "Cannot leave lobby when not in lobby",
+		}
 	}
 
 	if err := lobby.removeClient(c); err != nil {
@@ -292,39 +261,27 @@ func RejoinLobby(event Event, c *Client) error {
 	lobby, ok := c.manager.lobbies[rejoinLobbyEvent.LobbyCode]
 
 	if !ok {
-		rejoinLobbyFailed, err := createLobbyFailedEvent(rejoinLobbyEvent.LobbyCode, "lobby_not_found", "Lobby does not exist", EventRejoinLobbyFailed)
-
-		if err != nil {
-			return err
+		return ClientError{
+			Code:    "LOBBY_NOT_FOUND",
+			Message: "Lobby does not exist",
 		}
-
-		c.egress <- rejoinLobbyFailed
-		return nil // I dont think this should be nil
 	}
 
 	userID, ok := lobby.sessions[rejoinLobbyEvent.SessionToken]
 
 	if !ok {
-		rejoinLobbyFailed, err := createLobbyFailedEvent(rejoinLobbyEvent.LobbyCode, "invalid_session_token", fmt.Sprintf("Your session token is not valid for lobby: %v", rejoinLobbyEvent.LobbyCode), EventRejoinLobbyFailed)
-
-		if err != nil {
-			return err
+		return ClientError{
+			Code:    "INVALID_SESSION_TOKEN",
+			Message: fmt.Sprintf("Your session token is not valid for lobby: %v", rejoinLobbyEvent.LobbyCode),
 		}
-
-		c.egress <- rejoinLobbyFailed
-		return nil // I dont think this should be nil
 	}
 
 	// FIXME: Should we really give the newer client the older ID? Should Player have its own "lobby-specific ID", then clients have their own ID?
 	if userID != c.UserID {
-		rejoinLobbyFailed, err := createLobbyFailedEvent(rejoinLobbyEvent.LobbyCode, "incorrect_user_id", fmt.Sprintf("Your user ID does not match : %v", rejoinLobbyEvent.LobbyCode), EventRejoinLobbyFailed)
-
-		if err != nil {
-			return err
+		return ClientError{
+			Code:    "INCORRECT_USER_ID",
+			Message: fmt.Sprintf("Your user ID does not match : %v", rejoinLobbyEvent.LobbyCode),
 		}
-
-		c.egress <- rejoinLobbyFailed
-		return nil // I dont think this should be nil
 	}
 
 	c.lobby = lobby
@@ -392,28 +349,8 @@ func MakeAction(event Event, c *Client) error {
 		return fmt.Errorf("Bad payload in request: %v", err)
 	}
 
-	ok, gmErr := c.lobby.game.MakeAction(c.UserID, makeAction.Action, makeAction.Card, makeAction.PairIndex)
-
-	if !ok {
-		var actionFailedMsg ActionFailedEvent
-
-		actionFailedMsg.Code = gmErr.Code
-		actionFailedMsg.Message = gmErr.Message
-
-		actionFailedData, err := json.Marshal(actionFailedMsg)
-
-		if err != nil {
-			return fmt.Errorf("Failed to marshal action failed message: %v\n", err)
-		}
-
-		actionFailed := Event{
-			Payload: actionFailedData,
-			Type:    EventActionFailed,
-		}
-
-		c.egress <- actionFailed
-
-		return fmt.Errorf("Action Failed in MakeAction: %v\n", gmErr)
+	if gmErr := c.lobby.game.MakeAction(c.UserID, makeAction.Action, makeAction.Card, makeAction.PairIndex); gmErr != nil {
+		return gmErr
 	}
 
 	var actionMadeMsg ActionMadeEvent

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"maps"
 	"math"
 	"math/rand/v2"
@@ -27,6 +28,11 @@ type Game struct {
 type Error struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+	Err     error
+}
+
+func (e Error) Error() string {
+	return fmt.Sprintf("Code: %s, Message: %s", e.Code, e.Message)
 }
 
 // Generates a full deck of cards
@@ -104,7 +110,7 @@ func (g *Game) StartNextTurn(initial bool, skipDefender bool) {
 		InitialAttackerID: initialAttacker,
 		AttackerIDs:       g.AdjacentTo(defender),
 
-		Phase: TP_INITIAL,
+		Phase: TurnPhaseInitial,
 	}
 
 	g.Turn = turn

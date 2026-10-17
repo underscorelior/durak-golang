@@ -14,6 +14,7 @@ type Event struct {
 type EventHandler func(event Event, c *Client) error
 
 const (
+	EventError                 = "error"
 	EventConnectionEstablished = "connection_established"
 	EventMenuLobbiesUpdated    = "menu_lobbies_updated" // TODO: later switch to a "diff" based approach, only send down stuff that changed rather than everything. also if nothing changed, send nothing at all. ALSO FIND A BETTER NAME
 	EventUpdateUser            = "update_user"
@@ -21,7 +22,6 @@ const (
 	EventCreateLobby           = "create_lobby"
 	EventLobbyCreated          = "lobby_created"
 	EventJoinLobby             = "join_lobby"
-	EventJoinLobbyFailed       = "join_lobby_failed"
 	EventLobbyJoined           = "lobby_joined"
 	EventPlayerJoined          = "player_joined"
 	EventLeaveLobby            = "leave_lobby"
@@ -29,21 +29,13 @@ const (
 	EventPlayerLeft            = "player_left"
 	EventPlayerDisconnected    = "player_disconnected"
 	EventRejoinLobby           = "rejoin_lobby"
-	EventRejoinLobbyFailed     = "rejoin_lobby_failed"
 	EventLobbyRejoined         = "lobby_rejoined"
 	EventPlayerRejoined        = "player_rejoined"
 	EventStartGame             = "start_game"
 	EventGameStarted           = "game_started"
 	EventMakeAction            = "make_action"
 	EventActionMade            = "action_made"
-	EventActionFailed          = "action_failed"
 )
-
-type LobbyFailedEvent struct {
-	Code      string `json:"code"`
-	Message   string `json:"message"`
-	LobbyCode string `json:"lobby_code"`
-}
 
 type ConnectionEstablishedEvent struct {
 	UserID  string         `json:"user_id"`
@@ -130,6 +122,8 @@ type ActionMadeEvent struct {
 	PairIndex *int           `json:"pair_index,omitempty"`
 }
 
-type ActionFailedEvent struct {
-	game.Error
+type ErrorEvent struct {
+	Code     string `json:"code"`
+	Message  string `json:"message"`
+	EventFor string `json:"event_for"`
 }

@@ -1,8 +1,10 @@
 package server
 
 import (
+	"durak/internal/game"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -37,6 +39,8 @@ func NewManager() *Manager {
 
 	m.setupEventHandlers()
 
+	go m.broadcastMenuLobbyUpdates()
+
 	return m
 }
 
@@ -51,14 +55,28 @@ func (m *Manager) setupEventHandlers() {
 }
 
 func (m *Manager) routeEvent(event Event, c *Client) error {
-	if handler, ok := m.handlers[event.Type]; ok {
-		if err := handler(event, c); err != nil {
-			return err
-		}
-		return nil
-	} else {
-		return errors.New("Unknown Event")
+	handler, ok := m.handlers[event.Type]
+	if !ok {
+		return c.sendError(&ClientError{Code: "UNKNOWN_EVENT", Message: fmt.Sprintf("Unknown Event: %v", event.Type)}, event.Type)
 	}
+
+	err := handler(event, c)
+	if err == nil {
+		return nil
+	}
+
+	var ce *ClientError
+	if errors.As(err, &ce) {
+		return c.sendError(ce, event.Type)
+	}
+
+	var ge *game.Error
+	if errors.As(err, &ge) {
+		return c.sendError(&ClientError{Code: ge.Code, Message: ge.Message}, event.Type)
+	}
+
+	log.Printf("handler %s: %v", event.Type, err)
+	return c.sendError(&ClientError{Code: "INTERNAL", Message: "Something went wrong"}, event.Type)
 }
 
 func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
