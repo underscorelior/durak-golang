@@ -19,7 +19,7 @@ var Suits = [4]Suit{
 type Rank int
 
 const (
-	Six = iota + 6
+	Six Rank = iota + 6
 	Seven
 	Eight
 	Nine

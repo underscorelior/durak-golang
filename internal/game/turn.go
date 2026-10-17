@@ -18,20 +18,20 @@ type Turn struct {
 type TurnPhase int
 
 const (
-	TP_INITIAL  = iota // This represents the initial state of the round (initial attacker has yet to place first card, no one but initial attacker can attack)
-	TP_GAME            // This represents that the game is active (i.e. defender and attackers can make simultaneous actions)
-	TP_TAKE            // This represents when a defender either opts to take or cannot defend the attacks placed down, gives a small period where attackers can toss on additional cards
-	TP_DRAW            // All players that need to draw, draw up to 6 cards
-	TP_COMPLETE        // Represents a completed combat, about to go to a new inital state
+	TurnPhaseInitial  TurnPhase = iota // This represents the initial state of the round (initial attacker has yet to place first card, no one but initial attacker can attack)
+	TurnPhaseGame                      // This represents that the game is active (i.e. defender and attackers can make simultaneous actions)
+	TurnPhaseTake                      // This represents when a defender either opts to take or cannot defend the attacks placed down, gives a small period where attackers can toss on additional cards
+	TurnPhaseDraw                      // All players that need to draw, draw up to 6 cards
+	TurnPhaseComplete                  // Represents a completed combat, about to go to a new inital state
 )
 
 type Action int
 
 const (
-	A_DEFENSE = iota
-	A_ATTACK
-	A_TAKE
-	A_PASS
+	ActionDefense Action = iota
+	ActionAttack
+	ActionTake
+	ActionPass
 )
 
 // Checks if there is still capacity for another attack card

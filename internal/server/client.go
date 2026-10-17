@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -14,6 +15,17 @@ var (
 
 	pingInterval = (pongWait * 9) / 10 // Has to be lower than pongWait, this is the interval for the client to respond
 )
+
+// TODO: Find a proper location for this struct
+type ClientError struct {
+	Code     string
+	Message  string
+	ErrorFor string
+}
+
+func (e ClientError) Error() string {
+	return fmt.Sprintf("%s: %s", e.Code, e.Message)
+}
 
 type ClientList map[string]*Client // UserID -> Client
 
@@ -121,4 +133,18 @@ func (c *Client) writeEvent(event Event) error {
 func (c *Client) pongHandler(pongMsg string) error {
 	// fmt.Println(c.Name, "- Pong")
 	return c.connection.SetReadDeadline(time.Now().Add(pongWait))
+}
+
+func (c *Client) sendError(ce *ClientError, eventType string) error {
+	if ce.ErrorFor == "" {
+		ce.ErrorFor = eventType
+	}
+
+	payload, err := json.Marshal(ce)
+	if err != nil {
+		return fmt.Errorf("marshal client error: %w", err)
+	}
+
+	c.egress <- Event{Type: EventError, Payload: payload}
+	return nil
 }
