@@ -75,18 +75,19 @@ func (m *Manager) routeEvent(event Event, c *Client) error {
 		return c.sendError(&ClientError{Code: ge.Code, Message: ge.Message}, event.Type)
 	}
 
-	log.Printf("handler %s: %v", event.Type, err)
-	return c.sendError(&ClientError{Code: "INTERNAL", Message: "Something went wrong"}, event.Type)
+	log.Printf("(routeEvent) handler %s: %v\n", event.Type, err)
+	return c.sendError(&ClientError{Code: "INTERNAL", Message: fmt.Sprintf("Something went wrong. %v", err.Error())}, event.Type)
 }
 
+// TODO: Clean up serveWS
 func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
-	log.Println("New connection")
+	log.Println("(ServeWS) New connection")
 	name := r.URL.Query().Get("username")
 	session := r.URL.Query().Get("session")
 
 	conn, err := websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("Error in upgrading http connection to websocket: %v", err)
+		log.Println("(ServeWS) Error in upgrading http connection to websocket:", err)
 		return
 	}
 
@@ -95,6 +96,9 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 	isRejoining := false
 
 	err = json.Unmarshal([]byte(session), &sv)
+
+	// TODO: I have zero clue what is going on, rewrite this!
+
 	// FIXME: might be a mistake bc err != nil could be more than just an empty string, but we will use the naive approach
 	if _, ok := m.lobbies[sv.LobbyCode]; !ok || err != nil || sv.SessionToken == "" || sv.LobbyCode == "" {
 		// no prior session, create a new client
@@ -105,12 +109,12 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 		if !lobOk {
 			log.Println("!lobOk")
 			client = NewClient(conn, m, name)
-		} else if userId, sessOk := l.sessions[sv.SessionToken]; !sessOk {
+		} else if userID, sessOk := l.sessions[sv.SessionToken]; !sessOk {
 			log.Printf("!sessOk, %v\n%v\n", sv, l.sessions)
 			client = NewClient(conn, m, name)
 		} else {
 			log.Println("else")
-			p := l.players[userId]
+			p := l.players[userID]
 
 			client = NewClient(conn, m, p.Name)
 			client.UserID = p.UserID
@@ -134,7 +138,7 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 
 	data, err := json.Marshal(connEstMsg)
 	if err != nil {
-		log.Printf("Failed to marshal ConnectionEstablished message: %v", err)
+		log.Println("(ServeWS) Failed to marshal ConnectionEstablished message:", err)
 		return
 	}
 
@@ -168,24 +172,24 @@ func (m *Manager) removeClient(c *Client) {
 }
 
 func (m *Manager) broadcastMenuLobbyUpdates() {
-	menuLobbiesUpdatedInterval := 5 * time.Second
-	lobbyPreviewUpdateTicker := time.NewTicker(menuLobbiesUpdatedInterval)
+	const lobbyPrevInterval = 5 * time.Second
+	lobbyPrevTicker := time.NewTicker(lobbyPrevInterval)
 
 	defer func() {
-		log.Println("Broadcast of MenuLobbies stopped")
-		lobbyPreviewUpdateTicker.Stop()
+		log.Println("Broadcast of MenuLobbies stopped.")
+		lobbyPrevTicker.Stop()
 	}()
 
-	for range lobbyPreviewUpdateTicker.C {
+	for range lobbyPrevTicker.C {
 		sent := 0
-		var menuLobbiesUpdatedMsg MenuLobbiesUpdatedEvent
+		var lobbyPrevMsg MenuLobbiesUpdatedEvent
 
-		menuLobbiesUpdatedMsg.Lobbies = m.MenuLobbies()
-		menuLobbiesUpdatedMsg.NextUpdate = time.Now().Add(menuLobbiesUpdatedInterval)
+		lobbyPrevMsg.Lobbies = m.MenuLobbies()
+		lobbyPrevMsg.NextUpdate = time.Now().Add(lobbyPrevInterval)
 
-		data, err := json.Marshal(menuLobbiesUpdatedMsg)
+		data, err := json.Marshal(lobbyPrevMsg)
 		if err != nil {
-			log.Printf("Failed to marshal MenuLobbiesUpdated message: %v", err)
+			log.Println("(broadcastMenuLobbyUpdates) Failed to marshal MenuLobbiesUpdated message:", err)
 			continue
 		}
 
@@ -197,15 +201,14 @@ func (m *Manager) broadcastMenuLobbyUpdates() {
 		for _, client := range m.clients {
 			if client.lobby == nil {
 				if err := client.writeEvent(menuLobbiesUpdated); err != nil {
-					log.Printf("failed to send message: %v", err)
+					log.Println("(broadcastMenuLobbyUpdates) Failed to send MenuLobbiesUpdated message:", err)
 					continue
 				}
 				sent++
 			}
 		}
 
-		log.Printf("Broadcasted %v menus to %v clients\n", len(menuLobbiesUpdatedMsg.Lobbies), sent)
-
+		log.Printf("(broadcastMenuLobbyUpdate) Broadcasted %v menus to %v clients\n", len(lobbyPrevMsg.Lobbies), sent)
 	}
 }
 

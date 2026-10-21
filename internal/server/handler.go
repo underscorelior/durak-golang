@@ -3,6 +3,7 @@ package server
 import (
 	"durak/internal/game"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -11,7 +12,7 @@ import (
 func UpdateUser(event Event, c *Client) error {
 	var updateUserEvent UpdateUserEvent
 	if err := json.Unmarshal(event.Payload, &updateUserEvent); err != nil {
-		return fmt.Errorf("Bad payload in request: %v", err)
+		return fmt.Errorf("Bad payload in request: %w", err)
 	}
 
 	c.Name = updateUserEvent.Name
@@ -22,7 +23,7 @@ func UpdateUser(event Event, c *Client) error {
 
 	data, err := json.Marshal(userUpdatedMsg)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal UserUpdated message: %v", err)
+		return fmt.Errorf("Failed to marshal UserUpdated message: %w", err)
 	}
 
 	userUpdated := Event{
@@ -46,7 +47,7 @@ func CreateLobby(event Event, c *Client) error {
 
 	data, err := json.Marshal(lobbyCreatedMsg)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal LobbyCreated message: %v", err)
+		return fmt.Errorf("Failed to marshal LobbyCreated message: %w", err)
 	}
 
 	lobbyCreated := Event{
@@ -62,11 +63,19 @@ func CreateLobby(event Event, c *Client) error {
 func JoinLobby(event Event, c *Client) error {
 	var joinLobbyEvent JoinLobbyEvent
 	if err := json.Unmarshal(event.Payload, &joinLobbyEvent); err != nil {
-		return fmt.Errorf("Bad payload in request: %v", err)
+		return fmt.Errorf("Bad payload in request: %w", err)
 	}
 
 	if c.lobby != nil && joinLobbyEvent.LobbyCode == c.lobby.LobbyCode {
-		return nil // How else should I handle this?
+		return ClientError{
+			Code:    "ALREADY_IN_LOBBY",
+			Message: "Cannot join a lobby you are already a part of",
+		}
+	}
+
+	if c.lobby != nil {
+		// TODO: Or should we handle this another way?
+		c.lobby.removeClient(c)
 	}
 
 	lobby, ok := c.manager.lobbies[joinLobbyEvent.LobbyCode]
@@ -123,7 +132,7 @@ func JoinLobby(event Event, c *Client) error {
 
 	data, err := json.Marshal(lobbyJoinedMsg)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal lobby joined message: %v", err)
+		return fmt.Errorf("Failed to marshal LobbyJoined message: %w", err)
 	}
 
 	lobbyJoined := Event{
@@ -139,7 +148,7 @@ func JoinLobby(event Event, c *Client) error {
 
 	broadcastData, err := json.Marshal(playerJoinedMsg)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal player joined message: %v", err)
+		return fmt.Errorf("Failed to marshal PlayerJoined message: %w", err)
 	}
 
 	playerJoined := Event{
@@ -167,7 +176,7 @@ func LeaveLobby(event Event, c *Client) error {
 	}
 
 	if err := lobby.removeClient(c); err != nil {
-		log.Println(err)
+		log.Println("(LeaveLobby)", err)
 		return err
 	}
 
@@ -177,7 +186,7 @@ func LeaveLobby(event Event, c *Client) error {
 
 	data, err := json.Marshal(lobbyLeftMsg)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal lobby left message: %v", err)
+		return fmt.Errorf("Failed to marshal LobbyLeft message: %w", err)
 	}
 
 	lobbyLeft := Event{
@@ -195,7 +204,7 @@ func StartGame(event Event, c *Client) error {
 
 	if l == nil {
 		// TODO: Probably send the client a message...
-		return fmt.Errorf("Cant start game when not in lobby.")
+		return errors.New("Cant start game when not in lobby.")
 	}
 
 	if c.UserID != l.HostID {
@@ -234,7 +243,7 @@ func StartGame(event Event, c *Client) error {
 
 		data, err := json.Marshal(gameStartedMsg)
 		if err != nil {
-			return fmt.Errorf("Failed to marshal lobby joined message: %v", err)
+			return fmt.Errorf("Failed to marshal GameStarted message: %w", err)
 		}
 
 		event := Event{
@@ -284,13 +293,13 @@ func RejoinLobby(event Event, c *Client) error {
 		}
 	}
 
-	c.lobby = lobby
 	p := lobby.players[c.UserID]
 
 	if p == nil {
-		return fmt.Errorf("Failed to locate player")
+		return errors.New("Failed to locate player")
 	}
 
+	c.lobby = lobby
 	p.IsConnected = true
 
 	lobby.addClient(c, p)
@@ -301,7 +310,7 @@ func RejoinLobby(event Event, c *Client) error {
 
 	data, err := json.Marshal(lobbyRejoinedMsg)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal lobby rejoined message: %v", err)
+		return fmt.Errorf("Failed to marshal LobbbyRejoined message: %w", err)
 	}
 
 	lobbyRejoined := Event{
@@ -317,7 +326,7 @@ func RejoinLobby(event Event, c *Client) error {
 
 	broadcastData, err := json.Marshal(playerRejoinedMsg)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal player joined message: %v\n", err)
+		return fmt.Errorf("Failed to marshal PlayerRejoined message: %w", err)
 	}
 
 	playerRejoined := Event{
@@ -336,17 +345,17 @@ func RejoinLobby(event Event, c *Client) error {
 
 func MakeAction(event Event, c *Client) error {
 	if c.lobby == nil {
-		return fmt.Errorf("Cant make action when not in lobby")
+		return errors.New("Cant make action when not in lobby")
 	}
 
 	if c.lobby.game == nil {
-		return fmt.Errorf("Cant make an action when there is no active game")
+		return errors.New("Cant make an action when there is no active game")
 	}
 
 	var makeAction MakeActionEvent
 
 	if err := json.Unmarshal(event.Payload, &makeAction); err != nil {
-		return fmt.Errorf("Bad payload in request: %v", err)
+		return fmt.Errorf("Bad payload in request: %w", err)
 	}
 
 	if gmErr := c.lobby.game.MakeAction(c.UserID, makeAction.Action, makeAction.Card, makeAction.PairIndex); gmErr != nil {
@@ -364,7 +373,7 @@ func MakeAction(event Event, c *Client) error {
 	actionMadeData, err := json.Marshal(actionMadeMsg)
 
 	if err != nil {
-		return fmt.Errorf("Failed to marshal action made message: %v\n", err)
+		return fmt.Errorf("Failed to marshal ActionMade message: %w", err)
 	}
 
 	actionMade := Event{

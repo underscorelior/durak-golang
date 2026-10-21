@@ -10,11 +10,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var (
-	pongWait = 10 * time.Second // how long to wait for a pong response, if 10s is up, kick
-
-	pingInterval = (pongWait * 9) / 10 // Has to be lower than pongWait, this is the interval for the client to respond
-)
+const pongWait = 10 * time.Second        // how long to wait for a pong response, if 10s is up, kick
+const pingInterval = (pongWait * 9) / 10 // Has to be lower than pongWait, this is the interval for the client to respond
 
 // TODO: Find a proper location for this struct
 type ClientError struct {
@@ -56,7 +53,7 @@ func (c *Client) readMessages() {
 	}()
 
 	if err := c.connection.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-		log.Println("err")
+		log.Println("(readMessages) err")
 		return
 	}
 
@@ -69,7 +66,7 @@ func (c *Client) readMessages() {
 
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("Error reading message: %v", err)
+				log.Println("(readMessages) Error reading message:", err)
 			}
 			break
 		}
@@ -77,13 +74,13 @@ func (c *Client) readMessages() {
 		var request Event
 
 		if err := json.Unmarshal(payload, &request); err != nil {
-			log.Printf("error marshalling event: %v", err) // TODO: Manage all of these errors
+			log.Println("(readMessages) Error un-marshalling event:", err) // TODO: Manage all of these errors
 			break
 		}
 
 		if err := c.manager.routeEvent(request, c); err != nil {
-			log.Println("Error handling message: ", err)
-			// TODO: SEND THE ERRORS TO THE CLIENT
+			log.Println("(readMessages) Error routing event message:", err)
+			break
 		}
 	}
 }
@@ -100,22 +97,21 @@ func (c *Client) writeMessages() {
 		case message, ok := <-c.egress:
 			if !ok { // egress channel has closed
 				if err := c.connection.WriteMessage(websocket.CloseMessage, nil); err != nil {
-					log.Println("Connection closed:", err)
+					log.Println("(writeMessages) Connection closed:", err)
 				}
 				return
 			}
 
 			if err := c.writeEvent(message); err != nil {
-				log.Printf("failed to send message: %v", err)
+				log.Println("(writeMessage) Failed to send message:", err)
 			}
-			log.Println("message sent")
 
 		case <-pongTicker.C:
 			if err := c.connection.WriteMessage(websocket.PingMessage, []byte(``)); err != nil {
-				log.Println("Error in sending ping: ", err)
+				log.Println("(writeMessage) Error in sending ping:", err)
+				// TODO: How else to handle this?
 				return
 			}
-			// fmt.Println(c.Name, "- Ping")
 
 		}
 	}
@@ -131,7 +127,6 @@ func (c *Client) writeEvent(event Event) error {
 }
 
 func (c *Client) pongHandler(pongMsg string) error {
-	// fmt.Println(c.Name, "- Pong")
 	return c.connection.SetReadDeadline(time.Now().Add(pongWait))
 }
 
@@ -142,7 +137,7 @@ func (c *Client) sendError(ce *ClientError, eventType string) error {
 
 	payload, err := json.Marshal(ce)
 	if err != nil {
-		return fmt.Errorf("marshal client error: %w", err)
+		return fmt.Errorf("(sendError) Error when marshalling ErrorEvent: %w", err)
 	}
 
 	c.egress <- Event{Type: EventError, Payload: payload}
