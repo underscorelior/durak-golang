@@ -86,11 +86,11 @@ func (c *Client) readMessages() {
 }
 
 func (c *Client) writeMessages() {
+	pongTicker := time.NewTicker(pingInterval)
 	defer func() {
 		c.manager.removeClient(c)
+		pongTicker.Stop()
 	}()
-
-	pongTicker := time.NewTicker(pingInterval)
 
 	for {
 		select {
@@ -103,12 +103,12 @@ func (c *Client) writeMessages() {
 			}
 
 			if err := c.writeEvent(message); err != nil {
-				log.Println("(writeMessage) Failed to send message:", err)
+				log.Println("(writeMessages) Failed to send message:", err)
 			}
 
 		case <-pongTicker.C:
 			if err := c.connection.WriteMessage(websocket.PingMessage, []byte(``)); err != nil {
-				log.Println("(writeMessage) Error in sending ping:", err)
+				log.Println("(writeMessages) Error in sending ping:", err)
 				// TODO: How else to handle this?
 				return
 			}

@@ -3,6 +3,7 @@ package server
 import (
 	"durak/internal/game"
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -126,4 +127,18 @@ type ErrorEvent struct {
 	Code     string `json:"code"`
 	Message  string `json:"message"`
 	EventFor string `json:"event_for"`
+}
+
+func newEvent(eventType string, data any) (Event, error) {
+	evtData, err := json.Marshal(data)
+	if err != nil {
+		return Event{}, fmt.Errorf("(newEvent) Failed to marshal %v event: %w", eventType, err)
+	}
+
+	event := Event{
+		Type:    eventType,
+		Payload: evtData,
+	}
+
+	return event, nil
 }

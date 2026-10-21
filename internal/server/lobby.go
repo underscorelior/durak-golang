@@ -2,7 +2,6 @@ package server
 
 import (
 	"durak/internal/game"
-	"encoding/json"
 	"fmt"
 	"log"
 	"maps"
@@ -228,19 +227,15 @@ func (l *Lobby) removeClient(c *Client) error {
 		delete(l.players, c.UserID)
 
 		// TODO: Technically, if a player presses leave, then they leave. If they dont, then they are disconnected.
-		var playerLeftMsg PlayerLeftEvent
-
-		playerLeftMsg.UserID = c.UserID
-		playerLeftMsg.HostID = l.HostID
-
-		broadcastData, err := json.Marshal(playerLeftMsg)
-		if err != nil {
-			return fmt.Errorf("Failed to marshal player left message: %v", err)
+		var playerLeftPayload PlayerLeftEvent
+		playerLeftPayload = PlayerLeftEvent{
+			UserID: c.UserID,
+			HostID: l.HostID,
 		}
 
-		playerLeft := Event{
-			Payload: broadcastData,
-			Type:    EventPlayerLeft,
+		playerLeft, err := newEvent(EventPlayerLeft, playerLeftPayload)
+		if err != nil {
+			return err
 		}
 
 		ignored := ClientList{
@@ -256,20 +251,15 @@ func (l *Lobby) removeClient(c *Client) error {
 	p.DisconnectedAt = time.Now()
 	p.IsConnected = false
 
-	var playerDisconnectedMsg PlayerDisconnectedEvent
-
-	playerDisconnectedMsg.DisconnectedAt = p.DisconnectedAt
-	playerDisconnectedMsg.UserID = p.UserID
-
-	data, err := json.Marshal(playerDisconnectedMsg)
-	if err != nil {
-		log.Println("(removeClient) Failed to marshal PlayerDisconnected message:", err)
-		return nil
+	var playerDisconnectedPayload PlayerDisconnectedEvent
+	playerDisconnectedPayload = PlayerDisconnectedEvent{
+		DisconnectedAt: p.DisconnectedAt,
+		UserID:         p.UserID,
 	}
 
-	playerDisconnected := Event{
-		Payload: data,
-		Type:    EventPlayerDisconnected,
+	playerDisconnected, err := newEvent(EventPlayerDisconnected, playerDisconnectedPayload)
+	if err != nil {
+		return err
 	}
 
 	l.broadcast(playerDisconnected, make(ClientList))

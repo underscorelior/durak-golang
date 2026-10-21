@@ -129,25 +129,21 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 	go client.readMessages()
 	go client.writeMessages()
 
-	var connEstMsg ConnectionEstablishedEvent
+	var connEstPayload ConnectionEstablishedEvent
+	connEstPayload = ConnectionEstablishedEvent{
+		Name:        name,
+		UserID:      client.UserID,
+		Lobbies:     m.MenuLobbies(),
+		IsRejoining: isRejoining,
+	}
 
-	connEstMsg.Name = name
-	connEstMsg.UserID = client.UserID
-	connEstMsg.Lobbies = m.MenuLobbies()
-	connEstMsg.IsRejoining = isRejoining
-
-	data, err := json.Marshal(connEstMsg)
+	connEst, err := newEvent(EventConnectionEstablished, connEstPayload)
 	if err != nil {
-		log.Println("(ServeWS) Failed to marshal ConnectionEstablished message:", err)
-		return
+		err := client.sendError(&ClientError{Code: "INTERNAL", Message: fmt.Sprintf("Something went wrong. %v", err.Error())}, EventConnectionEstablished)
+		fmt.Println("(ServeWS) Failed to send message:", err)
 	}
 
-	connectionEstablished := Event{
-		Payload: data,
-		Type:    EventConnectionEstablished,
-	}
-
-	client.egress <- connectionEstablished
+	client.egress <- connEst
 }
 
 func (m *Manager) addClient(c *Client) {

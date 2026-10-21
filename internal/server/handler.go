@@ -17,18 +17,12 @@ func UpdateUser(event Event, c *Client) error {
 
 	c.Name = updateUserEvent.Name
 
-	var userUpdatedMsg UserUpdatedEvent
+	var userUpdatedPayload UserUpdatedEvent
+	userUpdatedPayload.Name = c.Name
 
-	userUpdatedMsg.Name = c.Name
-
-	data, err := json.Marshal(userUpdatedMsg)
+	userUpdated, err := newEvent(EventUserUpdated, userUpdatedPayload)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal UserUpdated message: %w", err)
-	}
-
-	userUpdated := Event{
-		Payload: data,
-		Type:    EventUserUpdated,
+		return err
 	}
 
 	c.egress <- userUpdated
@@ -41,18 +35,12 @@ func CreateLobby(event Event, c *Client) error {
 	lobby := c.manager.NewLobby(c.UserID)
 	c.manager.addLobby(lobby)
 
-	var lobbyCreatedMsg LobbyCreatedEvent
+	var lobbyCreatedPayload LobbyCreatedEvent
+	lobbyCreatedPayload.LobbyCode = lobby.LobbyCode
 
-	lobbyCreatedMsg.LobbyCode = lobby.LobbyCode
-
-	data, err := json.Marshal(lobbyCreatedMsg)
+	lobbyCreated, err := newEvent(EventLobbyCreated, lobbyCreatedPayload)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal LobbyCreated message: %w", err)
-	}
-
-	lobbyCreated := Event{
-		Payload: data,
-		Type:    EventLobbyCreated,
+		return err
 	}
 
 	c.egress <- lobbyCreated
@@ -126,34 +114,22 @@ func JoinLobby(event Event, c *Client) error {
 
 	lobby.addClient(c, p)
 
-	var lobbyJoinedMsg LobbyJoinedEvent
+	var lobbyJoinedPayload LobbyJoinedEvent
+	lobbyJoinedPayload.Lobby = lobby.SnapshotFor(c)
 
-	lobbyJoinedMsg.Lobby = lobby.SnapshotFor(c)
-
-	data, err := json.Marshal(lobbyJoinedMsg)
+	lobbyJoined, err := newEvent(EventLobbyJoined, lobbyJoinedPayload)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal LobbyJoined message: %w", err)
-	}
-
-	lobbyJoined := Event{
-		Payload: data,
-		Type:    EventLobbyJoined,
+		return err
 	}
 
 	c.egress <- lobbyJoined
 
-	var playerJoinedMsg PlayerJoinedEvent
+	var playerJoinedPayload PlayerJoinedEvent
+	playerJoinedPayload.Player = *p
 
-	playerJoinedMsg.Player = *p
-
-	broadcastData, err := json.Marshal(playerJoinedMsg)
+	playerJoined, err := newEvent(EventPlayerJoined, playerJoinedPayload)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal PlayerJoined message: %w", err)
-	}
-
-	playerJoined := Event{
-		Payload: broadcastData,
-		Type:    EventPlayerJoined,
+		return err
 	}
 
 	ignored := ClientList{
@@ -180,18 +156,12 @@ func LeaveLobby(event Event, c *Client) error {
 		return err
 	}
 
-	var lobbyLeftMsg LobbyLeftEvent
+	var lobbyLeftPayload LobbyLeftEvent
+	lobbyLeftPayload.Lobbies = c.manager.MenuLobbies()
 
-	lobbyLeftMsg.Lobbies = c.manager.MenuLobbies()
-
-	data, err := json.Marshal(lobbyLeftMsg)
+	lobbyLeft, err := newEvent(EventLobbyLeft, lobbyLeftPayload)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal LobbyLeft message: %w", err)
-	}
-
-	lobbyLeft := Event{
-		Payload: data,
-		Type:    EventLobbyLeft,
+		return err
 	}
 
 	c.egress <- lobbyLeft
@@ -231,26 +201,27 @@ func StartGame(event Event, c *Client) error {
 	l.game = game.InitializeGame(gamePlayers)
 	l.InGame = true
 
-	var gameStartedMsg GameStartedEvent
-	gameStartedMsg.Lobby = l.Snapshot()
+	snapshot := l.Snapshot()
 
 	l.GenerateSessions()
 
 	for _, cl := range l.clients {
-		gameStartedMsg.Lobby.Position = l.players[cl.UserID].Position
-		gameStartedMsg.Lobby.GameState = l.game.StateFor(cl.UserID)
-		gameStartedMsg.Session = l.players[cl.UserID].session
+		p := l.players[cl.UserID]
 
-		data, err := json.Marshal(gameStartedMsg)
+		lobbySnapshot := snapshot
+		lobbySnapshot.Position = p.Position
+		lobbySnapshot.GameState = l.game.StateFor(cl.UserID)
+
+		var gameStartedPayload GameStartedEvent
+		gameStartedPayload.Lobby = lobbySnapshot
+		gameStartedPayload.Session = l.players[cl.UserID].session
+
+		gameStarted, err := newEvent(EventGameStarted, gameStartedPayload)
 		if err != nil {
-			return fmt.Errorf("Failed to marshal GameStarted message: %w", err)
+			return err
 		}
 
-		event := Event{
-			Payload: data,
-			Type:    EventGameStarted,
-		}
-		cl.egress <- event
+		cl.egress <- gameStarted
 	}
 
 	return nil
@@ -304,34 +275,22 @@ func RejoinLobby(event Event, c *Client) error {
 
 	lobby.addClient(c, p)
 
-	var lobbyRejoinedMsg LobbyRejoinedEvent
+	var lobbyRejoinedPayload LobbyRejoinedEvent
+	lobbyRejoinedPayload.Lobby = lobby.SnapshotFor(c)
 
-	lobbyRejoinedMsg.Lobby = lobby.SnapshotFor(c)
-
-	data, err := json.Marshal(lobbyRejoinedMsg)
+	lobbyRejoined, err := newEvent(EventLobbyRejoined, lobbyRejoinedPayload)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal LobbbyRejoined message: %w", err)
-	}
-
-	lobbyRejoined := Event{
-		Payload: data,
-		Type:    EventLobbyRejoined,
+		return err
 	}
 
 	c.egress <- lobbyRejoined
 
-	var playerRejoinedMsg PlayerRejoinedEvent
+	var playerRejoinedPayload PlayerRejoinedEvent
+	playerRejoinedPayload.UserID = c.UserID
 
-	playerRejoinedMsg.UserID = c.UserID
-
-	broadcastData, err := json.Marshal(playerRejoinedMsg)
+	playerRejoined, err := newEvent(EventPlayerRejoined, playerRejoinedPayload)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal PlayerRejoined message: %w", err)
-	}
-
-	playerRejoined := Event{
-		Payload: broadcastData,
-		Type:    EventPlayerRejoined,
+		return err
 	}
 
 	ignored := ClientList{
@@ -340,7 +299,6 @@ func RejoinLobby(event Event, c *Client) error {
 	lobby.broadcast(playerRejoined, ignored)
 
 	return nil
-
 }
 
 func MakeAction(event Event, c *Client) error {
@@ -362,23 +320,18 @@ func MakeAction(event Event, c *Client) error {
 		return gmErr
 	}
 
-	var actionMadeMsg ActionMadeEvent
-
-	actionMadeMsg.UserID = c.UserID
-	actionMadeMsg.Action = makeAction.Action
-	actionMadeMsg.Phase = c.lobby.game.Turn.Phase
-	actionMadeMsg.Card = makeAction.Card
-	actionMadeMsg.PairIndex = makeAction.PairIndex
-
-	actionMadeData, err := json.Marshal(actionMadeMsg)
-
-	if err != nil {
-		return fmt.Errorf("Failed to marshal ActionMade message: %w", err)
+	var actionMadePayload ActionMadeEvent
+	actionMadePayload = ActionMadeEvent{
+		UserID:    c.UserID,
+		Action:    makeAction.Action,
+		Phase:     c.lobby.game.Turn.Phase,
+		Card:      makeAction.Card,
+		PairIndex: makeAction.PairIndex,
 	}
 
-	actionMade := Event{
-		Payload: actionMadeData,
-		Type:    EventActionMade,
+	actionMade, err := newEvent(EventActionMade, actionMadePayload)
+	if err != nil {
+		return err
 	}
 
 	c.lobby.broadcast(actionMade, ClientList{})
