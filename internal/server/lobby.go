@@ -107,6 +107,10 @@ func (m *Manager) removeLobby(lobby *Lobby) {
 	m.Lock()
 	defer m.Unlock()
 
+	for _, c := range lobby.clients {
+		lobby.removeClient(c)
+	}
+
 	// if _, ok := m.lobbies[lobby.LobbyCode]; ok {
 	// Handle some sort of lobby deletion (DB stuff)
 	delete(m.lobbies, lobby.LobbyCode)
@@ -116,8 +120,7 @@ func (m *Manager) removeLobby(lobby *Lobby) {
 func (m *Manager) MenuLobbies() []LobbyPreview {
 	var lobbies []LobbyPreview
 
-	for lobbyCode := range m.lobbies {
-		l := m.lobbies[lobbyCode]
+	for _, l := range m.lobbies {
 		if l.IsHidden {
 			continue
 		}
@@ -163,6 +166,23 @@ func (l *Lobby) addClient(c *Client, p *Player) {
 	l.players[c.UserID] = p
 }
 
+/*
+* When a client is removed:
+
+Not during a game:
+*	Free up the current position.
+*	Set the lobby in the client to null
+* 	If the host leaves:
+* 		Either transfer to next oldest player
+* 		OR close the lobby
+* 	If Lobby remains open
+* 	Notify new host somehow and send a message to all players that a player left
+
+During a game:
+*   Remove client from lobby
+*   Send a message to all players saying the client disconnected
+*/
+
 func (l *Lobby) removeClient(c *Client) error {
 	l.Lock()
 	defer l.Unlock()
@@ -181,8 +201,13 @@ func (l *Lobby) removeClient(c *Client) error {
 
 		c.lobby = nil
 
-		// If host disconnects, give host to the next most recent player (that is connected.)
+		// If host disconnects while game is not active, give host to the next most recent player (that is connected.)
 		if c.UserID == l.HostID {
+			if len(l.players) <= 1 {
+				log.Printf("(removeClient) Closing lobby %v of size %v due to host leaving\n", l.LobbyCode, len(l.players))
+				l.manager.removeLobby(c.lobby)
+				return nil
+			}
 			ps := slices.Collect(maps.Values(l.players))
 
 			sort.Slice(ps[:], func(i, j int) bool {
@@ -191,10 +216,9 @@ func (l *Lobby) removeClient(c *Client) error {
 
 			fmt.Println(ps)
 
-			for pl := range ps {
-				player := ps[pl]
-				if player.UserID != l.HostID && player.IsConnected {
-					l.HostID = player.UserID
+			for _, pl := range ps {
+				if pl.UserID != l.HostID && pl.IsConnected {
+					l.HostID = pl.UserID
 					break
 				}
 			}
@@ -239,7 +263,7 @@ func (l *Lobby) removeClient(c *Client) error {
 
 	data, err := json.Marshal(playerDisconnectedMsg)
 	if err != nil {
-		log.Printf("Failed to marshal PlayerDisconnected message: %v", err)
+		log.Println("(removeClient) Failed to marshal PlayerDisconnected message:", err)
 		return nil
 	}
 
@@ -275,7 +299,7 @@ func (l *Lobby) freePosition(pos int) error {
 
 func (l *Lobby) usePosition(pos int) error {
 	if pos < 0 || pos >= l.MaxPlayers {
-		return fmt.Errorf("(freePosition) Position out of bounds")
+		return fmt.Errorf("(usePosition) Position out of bounds")
 	}
 
 	l.positions[pos] = true

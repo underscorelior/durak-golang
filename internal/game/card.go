@@ -55,7 +55,7 @@ type CardPair struct {
 
 // Can the defense Card beat the attack Card, checks Trump supremacy too
 func (cp *CardPair) DefendedBy(defense Card, trumpSuit Suit) bool {
-	if cp.DefenseCard != nil && !cp.IsOccupied() {
+	if cp.DefenseCard != nil || !cp.IsOccupied() {
 		return false
 	}
 
@@ -75,5 +75,5 @@ func (cp *CardPair) IsOccupied() bool {
 }
 
 func (c *Card) isEmpty() bool {
-	return c.Rank != 0 || c.Suit != 0
+	return c.Rank == 0 && c.Suit == 0
 }

@@ -77,7 +77,7 @@ type PlayerJoinedEvent struct {
 }
 
 type LobbyLeftEvent struct {
-	Lobbies []LobbyPreview `json:"lobbies"` // TODO: Maybe this isnt needed
+	Lobbies []LobbyPreview `json:"lobbies"`
 }
 
 type PlayerLeftEvent struct {

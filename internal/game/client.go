@@ -23,6 +23,7 @@ func (g *Game) playerSnapshots() []GamePlayerState {
 			UserID:   userID,
 			HandSize: len(player.hand),
 			Position: player.Position,
+			Passed:   player.Passed,
 		}
 		playerSnapshots = append(playerSnapshots, playerSnapshot)
 	}

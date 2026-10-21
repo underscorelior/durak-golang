@@ -36,8 +36,6 @@ const (
 
 // Checks if there is still capacity for another attack card
 func (t *Turn) TableIsFull() bool {
-	// TODO: Support 5 before first beat and 6 after
-
 	for _, pair := range t.TableState {
 		if !pair.IsOccupied() {
 			return false
@@ -68,7 +66,6 @@ func (t *Turn) GetPlayedCards() []Card {
 	return cards
 }
 
-// TODO: Better name
 type PlayerOrder struct {
 	Next     string
 	Previous string

@@ -25,6 +25,7 @@ type Game struct {
 	FirstDefense bool
 }
 
+// TODO: Find a better way to do client/server err handling
 type Error struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
@@ -57,8 +58,8 @@ func (g *Game) ShuffleDeck() {
 
 // Deals cards to the Players in the game, removes those cards from the deck
 func (g *Game) DealCards() {
-	for i := range g.players {
-		g.players[i].hand = slices.Clone(g.deck[:6]) // TODO: Fix magic number : 6
+	for _, player := range g.players {
+		player.hand = slices.Clone(g.deck[:6]) // TODO: Fix magic number : 6
 		g.deck = g.deck[6:]
 	}
 } // TODO: Make a test that covers when two pplayers deal and then draw to the first player's hand then ensure that the second player's hand is unchanged (ensuring that the data is a copy and not a reference)
@@ -91,21 +92,21 @@ func (g *Game) FindPlayerWithLowestTrumpCardInHand() string {
 	return slices.Collect(maps.Keys(g.players))[i]
 }
 
-func (g *Game) StartNextTurn(initial bool, skipDefender bool) {
-	var initialAttacker string
+func (g *Game) StartNextTurn(initialAttacker string) {
+	// 	initialAttacker = g.Order[g.Turn.DefenderID].Next
+	//	initialAttacker = g.Turn.DefenderID
 
-	if initial {
-		initialAttacker = g.FindPlayerWithLowestTrumpCardInHand()
-	} else if skipDefender {
-		initialAttacker = g.Order[g.Turn.DefenderID].Next
-	} else {
-		initialAttacker = g.Turn.DefenderID
-	}
+	g.ResetPassingState()
 
 	defender := g.Order[initialAttacker].Next
 
+	tableSize := 6
+	if !g.FirstDefense {
+		tableSize = 5
+	}
+
 	turn := Turn{
-		TableState:        make([]CardPair, 6),
+		TableState:        make([]CardPair, tableSize),
 		DefenderID:        defender,
 		InitialAttackerID: initialAttacker,
 		AttackerIDs:       g.AdjacentTo(defender),
@@ -134,7 +135,7 @@ func InitializeGame(players map[string]struct{ Position int }) *Game {
 
 	g.SetupTableOrder()
 
-	g.StartNextTurn(true, false)
+	g.StartNextTurn(g.FindPlayerWithLowestTrumpCardInHand())
 
 	return &g
 }
@@ -143,6 +144,7 @@ func (g *Game) DeckSize() int {
 	return len(g.deck)
 }
 
+// TODO: Overhaul this function to make it more logical, this and DistributeCards()
 // Draws specified number of cards into player's hand. Returns a boolean representing if any more cards can be drawn.
 func (g *Game) DrawCards(userID string, amount int) bool {
 	p := g.players[userID]
@@ -150,6 +152,10 @@ func (g *Game) DrawCards(userID string, amount int) bool {
 	if p == nil {
 		// TODO: Some sort of error handling
 		return true
+	}
+
+	if len(g.deck) <= 0 {
+		return false
 	}
 
 	for range max(amount, 0) {
@@ -195,4 +201,10 @@ func (p *PlayerState) RemoveCard(card Card) []Card {
 
 func (p *PlayerState) CardInHand(card Card) bool {
 	return slices.Contains(p.hand, card)
+}
+
+func (g *Game) ResetPassingState() {
+	for _, pl := range g.players {
+		pl.Passed = false
+	}
 }

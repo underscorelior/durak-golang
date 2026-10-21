@@ -55,6 +55,13 @@ func (g *Game) CanPass(userID string) error {
 		}
 	}
 
+	if g.players[userID].Passed == true {
+		return Error{
+			Code:    "ALREADY_PASSED",
+			Message: "Cannot pass turn while already passed", // TODO: Reword!
+		}
+	}
+
 	return nil
 }
 
@@ -162,7 +169,7 @@ func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *i
 		return nil
 	}
 
-	// PASS: Only ATTACKERs during GAME phase, PASS BY DEFAULT ONCE CANNOT ADD NEW CARDS
+	// PASS: Only ATTACKERs during GAME phase, PASS BY DEFAULT ONCE CANNOT ADD NEW CARDS, PASSING CANCELLED ONCE A NEW CARD IS PLACED
 	if action == ActionPass {
 		if err := g.CanPass(userID); err != nil {
 			return err
@@ -212,6 +219,8 @@ func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *i
 
 		p.hand = p.RemoveCard(*card)
 
+		g.ResetPassingState()
+
 		return nil
 	}
 
@@ -224,6 +233,12 @@ func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *i
 		g.Turn.TableState[*pairIndex].AttackCard = *card
 
 		p.hand = p.RemoveCard(*card)
+
+		if t.Phase == TurnPhaseInitial {
+			g.Turn.Phase = TurnPhaseGame
+		}
+
+		g.ResetPassingState()
 
 		return nil
 	}
