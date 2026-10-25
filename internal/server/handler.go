@@ -76,8 +76,10 @@ func JoinLobby(event Event, c *Client) error {
 	}
 
 	if lobby.InGame {
-		// TODO: Error on attempting to join while active game
-		return nil
+		return ClientError{
+			Code:    "LOBBY_IN_GAME",
+			Message: fmt.Sprintf("Lobby (%v) is in an active game", joinLobbyEvent.LobbyCode),
+		}
 	}
 
 	if len(lobby.players) >= int(lobby.MaxPlayers) {
@@ -144,7 +146,6 @@ func LeaveLobby(event Event, c *Client) error {
 	lobby := c.lobby
 
 	if lobby == nil {
-		// TODO: Probably send the client a message...
 		return ClientError{
 			Code:    "NOT_IN_LOBBY",
 			Message: "Cannot leave lobby when not in lobby",
@@ -173,23 +174,32 @@ func StartGame(event Event, c *Client) error {
 	l := c.lobby
 
 	if l == nil {
-		// TODO: Probably send the client a message...
-		return errors.New("Cant start game when not in lobby.")
+		return ClientError{
+			Code:    "NOT_IN_LOBBY",
+			Message: "Cannot start game when not in lobby",
+		}
+
 	}
 
 	if c.UserID != l.HostID {
-		// TODO: Return some sort of Error event
-		return nil
+		return ClientError{
+			Code:    "PLAYER_NOT_HOST",
+			Message: fmt.Sprintf("User (%v) is not lobby host (%v)", c.UserID[:6], l.HostID[:6]),
+		}
 	}
 
 	if l.InGame {
-		// TODO: cant start if already playing, need to return some sort of error
-		return nil
+		return ClientError{
+			Code:    "GAME_ALREADY_STARTED",
+			Message: "Game has already started",
+		}
 	}
 
 	if len(l.players) <= 1 {
-		// TODO: Cant start if no more than 1 player
-		return nil
+		return ClientError{
+			Code:    "NOT_ENOUGH_PLAYERS",
+			Message: "Cannot start lobby with less than 2 players",
+		}
 	}
 
 	gamePlayers := make(map[string]struct{ Position int })
@@ -324,9 +334,9 @@ func MakeAction(event Event, c *Client) error {
 	actionMadePayload = ActionMadeEvent{
 		UserID:    c.UserID,
 		Action:    makeAction.Action,
-		Phase:     c.lobby.game.Turn.Phase,
 		Card:      makeAction.Card,
 		PairIndex: makeAction.PairIndex,
+		Phase:     &c.lobby.game.Turn.Phase,
 	}
 
 	actionMade, err := newEvent(EventActionMade, actionMadePayload)

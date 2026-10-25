@@ -177,26 +177,33 @@ func (m *Manager) broadcastMenuLobbyUpdates() {
 	}()
 
 	for range lobbyPrevTicker.C {
-		sent := 0
-		var lobbyPrevMsg MenuLobbiesUpdatedEvent
+		validPlayers := 0
 
-		lobbyPrevMsg.Lobbies = m.MenuLobbies()
-		lobbyPrevMsg.NextUpdate = time.Now().Add(lobbyPrevInterval)
+		for _, client := range m.clients {
+			if client.lobby == nil {
+				validPlayers += 1
+			}
+		}
 
-		data, err := json.Marshal(lobbyPrevMsg)
-		if err != nil {
-			log.Println("(broadcastMenuLobbyUpdates) Failed to marshal MenuLobbiesUpdated message:", err)
+		if validPlayers == 0 || len(m.clients) <= 0 {
 			continue
 		}
 
-		menuLobbiesUpdated := Event{
-			Payload: data,
-			Type:    EventMenuLobbiesUpdated,
+		sent := 0
+
+		var lobbyPrevPayload MenuLobbiesUpdatedEvent
+		lobbyPrevPayload.Lobbies = m.MenuLobbies()
+		lobbyPrevPayload.NextUpdate = time.Now().Add(lobbyPrevInterval)
+
+		lobbyPrev, err := newEvent(EventMenuLobbiesUpdated, lobbyPrevPayload)
+		if err != nil {
+			log.Println("(broadcastMenuLobbyUpdates) Failed to build event:", err)
+			return
 		}
 
 		for _, client := range m.clients {
 			if client.lobby == nil {
-				if err := client.writeEvent(menuLobbiesUpdated); err != nil {
+				if err := client.writeEvent(lobbyPrev); err != nil {
 					log.Println("(broadcastMenuLobbyUpdates) Failed to send MenuLobbiesUpdated message:", err)
 					continue
 				}
@@ -204,7 +211,7 @@ func (m *Manager) broadcastMenuLobbyUpdates() {
 			}
 		}
 
-		log.Printf("(broadcastMenuLobbyUpdate) Broadcasted %v menus to %v clients\n", len(lobbyPrevMsg.Lobbies), sent)
+		log.Printf("(broadcastMenuLobbyUpdate) Broadcasted %v menus to %v clients\n", len(lobbyPrevPayload.Lobbies), sent)
 	}
 }
 

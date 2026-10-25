@@ -53,7 +53,7 @@ func (c *Client) readMessages() {
 	}()
 
 	if err := c.connection.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-		log.Println("(readMessages) err")
+		log.Println("(readMessages) Failed to send pong deadline for client:", c.UserID[:6])
 		return
 	}
 

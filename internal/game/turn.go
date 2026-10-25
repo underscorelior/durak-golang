@@ -1,11 +1,5 @@
 package game
 
-import (
-	"maps"
-	"slices"
-	"sort"
-)
-
 type Turn struct {
 	TableState        []CardPair `json:"table_state"`
 	DefenderID        string     `json:"defender_id"`
@@ -28,7 +22,7 @@ const (
 type Action int
 
 const (
-	ActionDefense Action = iota
+	ActionDefend Action = iota
 	ActionAttack
 	ActionTake
 	ActionPass
@@ -66,51 +60,18 @@ func (t *Turn) GetPlayedCards() []Card {
 	return cards
 }
 
-type PlayerOrder struct {
-	Next     string
-	Previous string
+func (g *Game) ResetPassingState() {
+	for _, pl := range g.players {
+		pl.Passed = false
+	}
 }
-type TableOrder map[string]PlayerOrder
 
-func (g *Game) PlayerAtPosition(pos int) string {
-	for id, player := range g.players {
-		if player.Position == pos {
-			return id
+func (g *Game) AllAttackersPassed() bool {
+	for id := range g.Turn.AttackerIDs {
+		if !g.players[id].Passed {
+			return false
 		}
 	}
 
-	return ""
-}
-
-// TODO: Account for gaps in position
-func (g *Game) SetupTableOrder() {
-	numPlayers := len(g.players)
-	tableOrder := make(TableOrder, numPlayers)
-
-	players := g.players
-
-	keys := slices.Collect(maps.Keys(players))
-
-	sort.Slice(keys[:], func(i, j int) bool {
-		return players[keys[i]].Position < players[keys[j]].Position
-	})
-
-	for _, key := range keys {
-		pos := players[key].Position
-		tableOrder[key] = PlayerOrder{
-			Next:     g.PlayerAtPosition(calcPosOffset(pos, 1, numPlayers)),
-			Previous: g.PlayerAtPosition(calcPosOffset(pos, -1, numPlayers)),
-		}
-	}
-
-	g.Order = tableOrder
-}
-
-func (g *Game) AdjacentTo(userID string) map[string]bool {
-	o := g.Order[userID]
-	return map[string]bool{o.Next: true, o.Previous: true}
-}
-
-func calcPosOffset(pos, offset, num int) int {
-	return ((pos+offset)%num + num) % num
+	return true
 }

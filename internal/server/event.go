@@ -36,6 +36,8 @@ const (
 	EventGameStarted           = "game_started"
 	EventMakeAction            = "make_action"
 	EventActionMade            = "action_made"
+	EventTurnPassed            = "turn_passed"
+	EventCardsTaken            = "cards_taken"
 )
 
 type ConnectionEstablishedEvent struct {
@@ -116,11 +118,19 @@ type MakeActionEvent struct {
 }
 
 type ActionMadeEvent struct {
-	UserID    string         `json:"user_id"`
-	Action    game.Action    `json:"action"`
-	Phase     game.TurnPhase `json:"turn_phase"`
-	Card      *game.Card     `json:"card,omitempty"`
-	PairIndex *int           `json:"pair_index,omitempty"`
+	UserID    string          `json:"user_id"`
+	Action    game.Action     `json:"action"`
+	Card      *game.Card      `json:"card,omitempty"`
+	PairIndex *int            `json:"pair_index,omitempty"`
+	Phase     *game.TurnPhase `json:"turn_phase,omitempty"`
+}
+
+type CardsTakenEvent struct {
+	UserID        string    `json:"user_id"`
+	TossInTimeout time.Time `json:"toss_in_timeout"`
+}
+
+type TurnsPassedEvent struct {
 }
 
 type ErrorEvent struct {

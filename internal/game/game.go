@@ -8,12 +8,6 @@ import (
 	"slices"
 )
 
-type PlayerState struct {
-	hand     []Card
-	Position int
-	Passed   bool
-}
-
 type Game struct {
 	deck    []Card
 	players map[string]*PlayerState
@@ -35,34 +29,6 @@ type Error struct {
 func (e Error) Error() string {
 	return fmt.Sprintf("Code: %s, Message: %s", e.Code, e.Message)
 }
-
-// Generates a full deck of cards
-func CreateDeck() []Card {
-	var deck []Card
-
-	for _, suit := range Suits {
-		for _, rank := range Ranks {
-			deck = append(deck, Card{suit, rank})
-		}
-	}
-
-	return deck
-}
-
-// Shuffles a deck (in-place)
-func (g *Game) ShuffleDeck() {
-	rand.Shuffle(len(g.deck), func(i, j int) {
-		g.deck[i], g.deck[j] = g.deck[j], g.deck[i]
-	})
-}
-
-// Deals cards to the Players in the game, removes those cards from the deck
-func (g *Game) DealCards() {
-	for _, player := range g.players {
-		player.hand = slices.Clone(g.deck[:6]) // TODO: Fix magic number : 6
-		g.deck = g.deck[6:]
-	}
-} // TODO: Make a test that covers when two pplayers deal and then draw to the first player's hand then ensure that the second player's hand is unchanged (ensuring that the data is a copy and not a reference)
 
 func (g *Game) FindPlayerWithLowestTrumpCardInHand() string {
 	lowestID := ""
@@ -93,9 +59,6 @@ func (g *Game) FindPlayerWithLowestTrumpCardInHand() string {
 }
 
 func (g *Game) StartNextTurn(initialAttacker string) {
-	// 	initialAttacker = g.Order[g.Turn.DefenderID].Next
-	//	initialAttacker = g.Turn.DefenderID
-
 	g.ResetPassingState()
 
 	defender := g.Order[initialAttacker].Next
@@ -140,71 +103,91 @@ func InitializeGame(players map[string]struct{ Position int }) *Game {
 	return &g
 }
 
-func (g *Game) DeckSize() int {
-	return len(g.deck)
+func (g *Game) EndTurn(endPhase TurnPhase) {
+
 }
 
-// TODO: Overhaul this function to make it more logical, this and DistributeCards()
-// Draws specified number of cards into player's hand. Returns a boolean representing if any more cards can be drawn.
-func (g *Game) DrawCards(userID string, amount int) bool {
+func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *int) error {
+	t := g.Turn
 	p := g.players[userID]
 
 	if p == nil {
-		// TODO: Some sort of error handling
-		return true
-	}
-
-	if len(g.deck) <= 0 {
-		return false
-	}
-
-	for range max(amount, 0) {
-		p.hand = append(p.hand, g.deck[0])
-		g.deck = g.deck[1:]
-
-		// TODO: NEED TO ACCOUNT FOR TRUMP CARD
-		if len(g.deck) <= 0 {
-			return false
+		return Error{
+			Code:    "INVALID_USER",
+			Message: "Provided user ID is not in the game",
 		}
 	}
 
-	return true
-}
-
-func (g *Game) DistributeCards() {
-	ia := g.Turn.InitialAttackerID
-
-	g.DrawCards(ia, 6-len(g.players[ia].hand))
-
-	for attacker := range g.Turn.AttackerIDs {
-		if attacker != ia {
-			g.DrawCards(attacker, 6-len(g.players[attacker].hand))
+	// TAKE: Only DEFENDER during GAME phase
+	if action == ActionTake {
+		if err := g.CanTake(userID); err != nil {
+			return err
 		}
+
+		// START TIMER ALLOWING ATTACKERS TO THROW IN
+		// NEED A WAY TO ACCURATELY DISPLAY IT (SENDING TIMESTAMP AND ALLOWING CLIENT TO CALC HOW LONG IS LEFT?)
+		// ONCE TIME IS UP, MOVE CARDS TO PLAYER HAND
+		// p.hand = append(p.hand, t.GetPlayedCards()...)
+
+		return nil
 	}
 
-	g.DrawCards(g.Turn.DefenderID, 6-len(g.players[g.Turn.DefenderID].hand))
-}
-
-func (p *PlayerState) RemoveCard(card Card) []Card {
-	hand := slices.Collect(func(yield func(Card) bool) {
-		for _, c := range p.hand {
-			if c.Rank != card.Rank || c.Suit != card.Suit {
-				if !yield(c) {
-					return
-				}
-			}
+	// PASS: Only ATTACKERs during GAME phase, PASS BY DEFAULT ONCE CANNOT ADD NEW CARDS, PASSING CANCELLED ONCE A NEW CARD IS PLACED
+	if action == ActionPass {
+		if err := g.CanPass(userID); err != nil {
+			return err
 		}
-	})
 
-	return hand
-}
+		p.Passed = true
 
-func (p *PlayerState) CardInHand(card Card) bool {
-	return slices.Contains(p.hand, card)
-}
+		if g.AllAttackersPassed() {
+		}
 
-func (g *Game) ResetPassingState() {
-	for _, pl := range g.players {
-		pl.Passed = false
+		return nil
+	}
+
+	if err := g.ValidateParameters(userID, pairIndex, card); err != nil {
+		return err
+	}
+
+	cp := t.TableState[*pairIndex]
+
+	// DEFENSE: Only the DEFENDER during GAME phase and CARD defends corresponding PAIR
+	if action == ActionDefend {
+		if err := g.CanDefend(userID, *card, cp); err != nil {
+			return err
+		}
+
+		g.Turn.TableState[*pairIndex].DefenseCard = card
+
+		p.hand = p.RemoveCard(*card)
+
+		g.ResetPassingState()
+
+		return nil
+	}
+
+	// ATTACK: EITHER phase is INITIAL and user is the initial attacker OR phase is GAME and user is an ATTACKER and CARD is within valid pool
+	if action == ActionAttack {
+		if err := g.CanAttack(userID, *card, *pairIndex); err != nil {
+			return err
+		}
+
+		g.Turn.TableState[*pairIndex].AttackCard = *card
+
+		p.hand = p.RemoveCard(*card)
+
+		if t.Phase == TurnPhaseInitial {
+			g.Turn.Phase = TurnPhaseGame
+		}
+
+		g.ResetPassingState()
+
+		return nil
+	}
+
+	return Error{
+		Code:    "INVALID_ACTION",
+		Message: fmt.Sprintf("Action event provided invalid action: %v", action),
 	}
 }
