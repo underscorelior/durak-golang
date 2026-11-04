@@ -1,20 +1,18 @@
-import { Events, type WSEvent } from './events';
+import { GameEvent, type WSEvent } from './events';
 import {
-	actionFailedHandler,
 	actionMadeHandler,
 	connectionEstablishedHandler,
+	errorHandler,
 	gameStartedHandler,
-	joinLobbyFailedHandler,
 	lobbyCreatedHandler,
 	lobbyJoinedHandler,
 	lobbyLeftHandler,
 	lobbyRejoinedHandler,
+	memberJoinedHandler,
+	memberLeftHandler,
 	menuLobbiesUpdatedHandler,
 	playerDisconnectedHandler,
-	playerJoinedHandler,
-	playerLeftHandler,
 	playerRejoinedHandler,
-	rejoinLobbyFailedHandler,
 	userUpdatedHandler
 } from './handlers';
 
@@ -25,68 +23,60 @@ export function routeEvent(event: WSEvent) {
 	}
 
 	switch (event.type) {
-		case Events.ConnectionEstablished: {
+		case GameEvent.Error: {
+			errorHandler(event.payload);
+			break;
+		}
+		case GameEvent.ConnectionEstablished: {
 			connectionEstablishedHandler(event.payload);
 			break;
 		}
-		case Events.MenuLobbiesUpdated: {
+		case GameEvent.MenuLobbiesUpdated: {
 			menuLobbiesUpdatedHandler(event.payload);
 			break;
 		}
-		case Events.UserUpdated: {
+		case GameEvent.UserUpdated: {
 			userUpdatedHandler(event.payload);
 			break;
 		}
-		case Events.LobbyCreated: {
+		case GameEvent.LobbyCreated: {
 			lobbyCreatedHandler(event.payload);
 			break;
 		}
-		case Events.JoinLobbyFailed: {
-			joinLobbyFailedHandler(event.payload);
-			break;
-		}
-		case Events.LobbyJoined: {
+		case GameEvent.LobbyJoined: {
 			lobbyJoinedHandler(event.payload);
 			break;
 		}
-		case Events.PlayerJoined: {
-			playerJoinedHandler(event.payload);
+		case GameEvent.MemberJoined: {
+			memberJoinedHandler(event.payload);
 			break;
 		}
-		case Events.LobbyLeft: {
+		case GameEvent.LobbyLeft: {
 			lobbyLeftHandler(event.payload);
 			break;
 		}
-		case Events.PlayerLeft: {
-			playerLeftHandler(event.payload);
+		case GameEvent.MemberLeft: {
+			memberLeftHandler(event.payload);
 			break;
 		}
-		case Events.PlayerDisconnected: {
+		case GameEvent.PlayerDisconnected: {
 			playerDisconnectedHandler(event.payload);
 			break;
 		}
-		case Events.RejoinLobbyFailed: {
-			rejoinLobbyFailedHandler(event.payload);
-			break;
-		}
-		case Events.LobbyRejoined: {
+		case GameEvent.LobbyRejoined: {
 			lobbyRejoinedHandler(event.payload);
 			break;
 		}
-		case Events.PlayerRejoined: {
+		case GameEvent.PlayerRejoined: {
 			playerRejoinedHandler(event.payload);
 			break;
 		}
-		case Events.GameStarted: {
+		case GameEvent.GameStarted: {
 			gameStartedHandler(event.payload);
 			break;
 		}
-		case Events.ActionMade: {
+		case GameEvent.ActionMade: {
 			actionMadeHandler(event.payload);
-			break;
-		}
-		case Events.ActionFailed: {
-			actionFailedHandler(event.payload);
 			break;
 		}
 	}

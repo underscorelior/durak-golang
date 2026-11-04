@@ -1,6 +1,7 @@
 import type { Action, TurnPhase } from '$lib/game';
 
-export enum Events {
+export enum GameEvent {
+	Error = 'error',
 	ConnectionEstablished = 'connection_established',
 	MenuLobbiesUpdated = 'menu_lobbies_updated', // TODO: Find better name
 	UpdateUser = 'update_user',
@@ -8,33 +9,24 @@ export enum Events {
 	CreateLobby = 'create_lobby',
 	LobbyCreated = 'lobby_created',
 	JoinLobby = 'join_lobby',
-	JoinLobbyFailed = 'join_lobby_failed',
 	LobbyJoined = 'lobby_joined',
-	PlayerJoined = 'player_joined',
+	MemberJoined = 'member_joined',
 	LeaveLobby = 'leave_lobby',
 	LobbyLeft = 'lobby_left',
-	PlayerLeft = 'player_left',
+	MemberLeft = 'member_left',
 	PlayerDisconnected = 'player_disconnected',
 	RejoinLobby = 'rejoin_lobby',
-	RejoinLobbyFailed = 'rejoin_lobby_failed',
 	LobbyRejoined = 'lobby_rejoined',
 	PlayerRejoined = 'player_rejoined',
 	StartGame = 'start_game',
 	GameStarted = 'game_started',
 	MakeAction = 'make_action',
-	ActionMade = 'action_made', // TODO: Find better name
-	ActionFailed = 'action_failed'
+	ActionMade = 'action_made' // TODO: Find better name
 }
 
-type LobbyFailedEvent = {
-	lobby_code: string;
-	code: string;
-	message: string;
-};
-
 type ConnectionEstablishedPayload = {
-	name: string;
 	user_id: string;
+	name: string;
 	lobbies: LobbyPreview[];
 	is_rejoining: boolean;
 };
@@ -62,14 +54,12 @@ type JoinLobbyPayload = {
 	lobby_code: string;
 };
 
-type JoinLobbyFailedPayload = LobbyFailedEvent;
-
 type LobbyJoinedPayload = {
 	lobby: Lobby;
 };
 
-type PlayerJoinedPayload = {
-	player: Player;
+type MemberJoinedPayload = {
+	member: Member;
 };
 
 type LeaveLobbyPayload = object;
@@ -78,9 +68,10 @@ type LobbyLeftPayload = {
 	lobbies: LobbyPreview[];
 };
 
-type PlayerLeftPayload = {
+type MemberLeftPayload = {
 	user_id: string;
 	host_id: string;
+	position: number;
 };
 
 type PlayerDisconnectedPayload = {
@@ -92,8 +83,6 @@ type RejoinLobbyPayload = {
 	lobby_code: string;
 	session_token: string;
 };
-
-type RejoinLobbyFailedPayload = LobbyFailedEvent;
 
 type LobbyRejoinedPayload = {
 	lobby: Lobby;
@@ -119,40 +108,39 @@ type MakeActionPayload = {
 type ActionMadePayload = {
 	user_id: string;
 	action: Action;
-	turn_phase: TurnPhase;
 	card?: Card;
 	pair_index?: number;
+	turn_phase?: TurnPhase;
 };
 
-type ActionFailedPayload = {
+type ErrorPayload = {
 	code: string;
 	message: string;
+	error_for: GameEvent;
 };
 
 export type EventPayloads = {
-	[Events.ConnectionEstablished]: ConnectionEstablishedPayload;
-	[Events.MenuLobbiesUpdated]: MenuLobbiesUpdatedPayload;
-	[Events.UpdateUser]: UpdateUserPayload;
-	[Events.UserUpdated]: UserUpdatedPayload;
-	[Events.CreateLobby]: CreateLobbyPayload;
-	[Events.LobbyCreated]: LobbyCreatedPayload;
-	[Events.JoinLobby]: JoinLobbyPayload;
-	[Events.JoinLobbyFailed]: JoinLobbyFailedPayload;
-	[Events.LobbyJoined]: LobbyJoinedPayload;
-	[Events.PlayerJoined]: PlayerJoinedPayload;
-	[Events.LeaveLobby]: LeaveLobbyPayload;
-	[Events.LobbyLeft]: LobbyLeftPayload;
-	[Events.PlayerLeft]: PlayerLeftPayload;
-	[Events.PlayerDisconnected]: PlayerDisconnectedPayload;
-	[Events.RejoinLobby]: RejoinLobbyPayload;
-	[Events.RejoinLobbyFailed]: RejoinLobbyFailedPayload;
-	[Events.LobbyRejoined]: LobbyRejoinedPayload;
-	[Events.PlayerRejoined]: PlayerRejoinedPayload;
-	[Events.StartGame]: StartGamePayload;
-	[Events.GameStarted]: GameStartedPayload;
-	[Events.MakeAction]: MakeActionPayload;
-	[Events.ActionMade]: ActionMadePayload;
-	[Events.ActionFailed]: ActionFailedPayload;
+	[GameEvent.ConnectionEstablished]: ConnectionEstablishedPayload;
+	[GameEvent.MenuLobbiesUpdated]: MenuLobbiesUpdatedPayload;
+	[GameEvent.UpdateUser]: UpdateUserPayload;
+	[GameEvent.UserUpdated]: UserUpdatedPayload;
+	[GameEvent.CreateLobby]: CreateLobbyPayload;
+	[GameEvent.LobbyCreated]: LobbyCreatedPayload;
+	[GameEvent.JoinLobby]: JoinLobbyPayload;
+	[GameEvent.LobbyJoined]: LobbyJoinedPayload;
+	[GameEvent.MemberJoined]: MemberJoinedPayload;
+	[GameEvent.LeaveLobby]: LeaveLobbyPayload;
+	[GameEvent.LobbyLeft]: LobbyLeftPayload;
+	[GameEvent.MemberLeft]: MemberLeftPayload;
+	[GameEvent.PlayerDisconnected]: PlayerDisconnectedPayload;
+	[GameEvent.RejoinLobby]: RejoinLobbyPayload;
+	[GameEvent.LobbyRejoined]: LobbyRejoinedPayload;
+	[GameEvent.PlayerRejoined]: PlayerRejoinedPayload;
+	[GameEvent.StartGame]: StartGamePayload;
+	[GameEvent.GameStarted]: GameStartedPayload;
+	[GameEvent.MakeAction]: MakeActionPayload;
+	[GameEvent.ActionMade]: ActionMadePayload;
+	[GameEvent.Error]: ErrorPayload;
 };
 
 export type WSEvent = {

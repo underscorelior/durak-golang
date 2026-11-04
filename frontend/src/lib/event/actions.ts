@@ -1,34 +1,34 @@
 import type { Action } from '$lib/game';
 import { sendEvent } from '$lib/ws/connection';
-import { Events, type EventPayloads } from './events';
+import { GameEvent, type EventPayloads } from './events';
 
 export function updateUser(name: string) {
-	const updateUser = { name } as EventPayloads[Events.UpdateUser];
-	sendEvent(Events.CreateLobby, updateUser);
+	const updateUser = { name } as EventPayloads[GameEvent.UpdateUser];
+	sendEvent(GameEvent.CreateLobby, updateUser);
 }
 
 export function createLobby() {
-	sendEvent(Events.CreateLobby, {});
+	sendEvent(GameEvent.CreateLobby, {});
 }
 
 export function joinLobby(lobby_code: string) {
-	const joinLobby = { lobby_code } as EventPayloads[Events.JoinLobby];
+	const joinLobby = { lobby_code } as EventPayloads[GameEvent.JoinLobby];
 
-	sendEvent(Events.JoinLobby, joinLobby);
+	sendEvent(GameEvent.JoinLobby, joinLobby);
 }
 
 export function rejoinLobby(session: Session) {
-	const rejoinLobby = { ...session } as EventPayloads[Events.RejoinLobby];
+	const rejoinLobby = { ...session } as EventPayloads[GameEvent.RejoinLobby];
 
-	sendEvent(Events.RejoinLobby, rejoinLobby);
+	sendEvent(GameEvent.RejoinLobby, rejoinLobby);
 }
 
 export function leaveLobby() {
-	sendEvent(Events.LeaveLobby, {});
+	sendEvent(GameEvent.LeaveLobby, {});
 }
 
 export function startGame() {
-	sendEvent(Events.StartGame, {});
+	sendEvent(GameEvent.StartGame, {});
 }
 
 export function makeAction(action: Action, card?: Card, pair_index?: number) {
@@ -36,7 +36,7 @@ export function makeAction(action: Action, card?: Card, pair_index?: number) {
 		action,
 		card,
 		pair_index
-	} as EventPayloads[Events.MakeAction];
+	} as EventPayloads[GameEvent.MakeAction];
 
-	sendEvent(Events.MakeAction, makeAction);
+	sendEvent(GameEvent.MakeAction, makeAction);
 }

@@ -1,13 +1,25 @@
 import { globalState } from '$lib/state/state.svelte';
 import { joinLobby, rejoinLobby } from './actions';
-import type { EventPayloads, Events } from './events';
+import { GameEvent, type EventPayloads } from './events';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { clearLocalSession, setLocalSession } from '$lib/ws/connection';
-import { findLobbyPlayerByID, sortHand } from '$lib/util';
+import { findMemberByID, sortHand } from '$lib/util';
 import { Action } from '$lib/game';
 
-export function connectionEstablishedHandler(payload: EventPayloads[Events.ConnectionEstablished]) {
+// TODO: Proper err handling
+export function errorHandler(payload: EventPayloads[GameEvent.Error]) {
+	alert(`${payload.code}: ${payload.message} (${payload.error_for})`);
+
+	if (payload.error_for == GameEvent.JoinLobby || payload.error_for == GameEvent.RejoinLobby) {
+		clearLocalSession();
+		goto(resolve('/'));
+	}
+}
+
+export function connectionEstablishedHandler(
+	payload: EventPayloads[GameEvent.ConnectionEstablished]
+) {
 	globalState.user.name = payload.name;
 	globalState.user.user_id = payload.user_id;
 	globalState.menu.lobbies = payload.lobbies;
@@ -22,40 +34,32 @@ export function connectionEstablishedHandler(payload: EventPayloads[Events.Conne
 	}
 }
 
-export function menuLobbiesUpdatedHandler(payload: EventPayloads[Events.MenuLobbiesUpdated]) {
+export function menuLobbiesUpdatedHandler(payload: EventPayloads[GameEvent.MenuLobbiesUpdated]) {
 	globalState.menu.lobbies = payload.lobbies;
 }
 
-export function userUpdatedHandler(payload: EventPayloads[Events.UserUpdated]) {
+export function userUpdatedHandler(payload: EventPayloads[GameEvent.UserUpdated]) {
 	globalState.user.name = payload.name;
 }
 
-export function lobbyCreatedHandler(payload: EventPayloads[Events.LobbyCreated]) {
+export function lobbyCreatedHandler(payload: EventPayloads[GameEvent.LobbyCreated]) {
 	joinLobby(payload.lobby_code);
 }
 
-export function lobbyJoinedHandler(payload: EventPayloads[Events.LobbyJoined]) {
+export function lobbyJoinedHandler(payload: EventPayloads[GameEvent.LobbyJoined]) {
 	globalState.lobby = payload.lobby;
 
 	goto(resolve(`/${payload.lobby.lobby_code}`));
 }
 
-// TODO: Proper err handling
-export function joinLobbyFailedHandler(payload: EventPayloads[Events.JoinLobbyFailed]) {
-	clearLocalSession();
-	alert(`${payload.code}: ${payload.message} (${payload.lobby_code})`);
-
-	goto(resolve('/'));
-}
-
-export function playerJoinedHandler(payload: EventPayloads[Events.PlayerJoined]) {
-	const players = [...(globalState.lobby?.players ?? []), payload.player].sort(
+export function memberJoinedHandler(payload: EventPayloads[GameEvent.MemberJoined]) {
+	const members = [...(globalState.lobby?.members ?? []), payload.member].sort(
 		(a, b) => a.position - b.position
 	);
-	globalState.lobby = { ...globalState.lobby, players } as Lobby;
+	globalState.lobby = { ...globalState.lobby, members } as Lobby;
 }
 
-export function lobbyLeftHandler(payload: EventPayloads[Events.LobbyLeft]) {
+export function lobbyLeftHandler(payload: EventPayloads[GameEvent.LobbyLeft]) {
 	clearLocalSession();
 	goto(resolve('/'));
 
@@ -63,13 +67,14 @@ export function lobbyLeftHandler(payload: EventPayloads[Events.LobbyLeft]) {
 	globalState.menu.lobbies = payload.lobbies;
 }
 
-export function playerLeftHandler(payload: EventPayloads[Events.PlayerLeft]) {
-	const players = globalState.lobby?.players.filter((p) => p.user_id != payload.user_id);
-	globalState.lobby = { ...globalState.lobby, host_id: payload.host_id, players } as Lobby;
+export function memberLeftHandler(payload: EventPayloads[GameEvent.MemberLeft]) {
+	const members = globalState.lobby?.members.filter((p) => p.user_id != payload.user_id);
+	members?.forEach((m) => (m.position -= Number(m.position >= payload.position)));
+	globalState.lobby = { ...globalState.lobby, host_id: payload.host_id, members } as Lobby;
 }
 
-export function playerDisconnectedHandler(payload: EventPayloads[Events.PlayerDisconnected]) {
-	const disconnected = findLobbyPlayerByID(payload.user_id);
+export function playerDisconnectedHandler(payload: EventPayloads[GameEvent.PlayerDisconnected]) {
+	const disconnected = findMemberByID(payload.user_id);
 
 	if (disconnected) {
 		disconnected.disconnected_at = payload.disconnected_at;
@@ -77,14 +82,7 @@ export function playerDisconnectedHandler(payload: EventPayloads[Events.PlayerDi
 	}
 }
 
-export function rejoinLobbyFailedHandler(payload: EventPayloads[Events.RejoinLobbyFailed]) {
-	clearLocalSession();
-	alert(`${payload.code}: ${payload.message} (${payload.lobby_code})`);
-
-	goto(resolve('/'));
-}
-
-export function lobbyRejoinedHandler(payload: EventPayloads[Events.LobbyRejoined]) {
+export function lobbyRejoinedHandler(payload: EventPayloads[GameEvent.LobbyRejoined]) {
 	globalState.lobby = payload.lobby;
 
 	globalState.lobby.game_state = {
@@ -99,15 +97,15 @@ export function lobbyRejoinedHandler(payload: EventPayloads[Events.LobbyRejoined
 	} as GameState; // TODO: Fix thsi?
 }
 
-export function playerRejoinedHandler(payload: EventPayloads[Events.PlayerRejoined]) {
-	const rejoined = findLobbyPlayerByID(payload.user_id);
+export function playerRejoinedHandler(payload: EventPayloads[GameEvent.PlayerRejoined]) {
+	const rejoined = findMemberByID(payload.user_id);
 
 	if (rejoined) {
 		rejoined.is_connected = true;
 	}
 }
 
-export function gameStartedHandler(payload: EventPayloads[Events.GameStarted]) {
+export function gameStartedHandler(payload: EventPayloads[GameEvent.GameStarted]) {
 	const session = payload.session;
 
 	setLocalSession(session);
@@ -126,7 +124,7 @@ export function gameStartedHandler(payload: EventPayloads[Events.GameStarted]) {
 	} as GameState; // TODO: Fix thsi?
 }
 
-export function actionMadeHandler(payload: EventPayloads[Events.ActionMade]) {
+export function actionMadeHandler(payload: EventPayloads[GameEvent.ActionMade]) {
 	const game_state = globalState.lobby?.game_state;
 
 	if (!game_state || !globalState.lobby?.game_state) {
@@ -137,20 +135,19 @@ export function actionMadeHandler(payload: EventPayloads[Events.ActionMade]) {
 
 	const { user_id, action, turn_phase, card, pair_index } = payload;
 
-	if ([Action.Attack, Action.Defense].includes(action) && pair_index && card) {
+	if ([Action.ATTACK, Action.DEFEND].includes(action) && pair_index && card) {
 		const pair = game_state.turn.table_state[pair_index];
 
 		if (!pair) {
 			alert("Couldn't find card pair for actionMade");
 		}
 
-		if (action == Action.Attack) {
+		if (action == Action.ATTACK) {
 			pair.attack_card = card;
 		}
 
-		if (action == Action.Defense && pair_index != null && card) {
+		if (action == Action.DEFEND) {
 			pair.defense_card = card;
-			pair.is_defended = true;
 		}
 
 		game_state.players[playerIndex].hand_size -= 1;
@@ -162,8 +159,4 @@ export function actionMadeHandler(payload: EventPayloads[Events.ActionMade]) {
 	}
 
 	game_state.turn.phase = turn_phase;
-}
-
-export function actionFailedHandler(payload: EventPayloads[Events.ActionFailed]) {
-	alert(`${payload.code}: ${payload.message}`);
 }
