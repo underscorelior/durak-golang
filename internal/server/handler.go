@@ -82,17 +82,17 @@ func JoinLobby(event Event, c *Client) error {
 		}
 	}
 
-	if len(lobby.players) >= int(lobby.MaxPlayers) {
+	if len(lobby.members) >= int(lobby.MaxMembers) {
 		return ClientError{
 			Code:    "LOBBY_FULL",
-			Message: fmt.Sprintf("Lobby is full (Max %v)", lobby.MaxPlayers),
+			Message: fmt.Sprintf("Lobby is full (Max %v)", lobby.MaxMembers),
 		}
 	}
 
 	if _, ok := lobby.clients[c.UserID]; ok {
 		return ClientError{
-			Code:    "LOBBY_DUPLICATE_PLAYER",
-			Message: "Lobby contains a player with the same UserID as you",
+			Code:    "LOBBY_DUPLICATE_MEMBER",
+			Message: "Lobby contains a member with the same UserID as you",
 		}
 	}
 
@@ -106,7 +106,7 @@ func JoinLobby(event Event, c *Client) error {
 
 	c.lobby = lobby
 
-	p := &Player{
+	p := &Member{
 		UserID:      c.UserID,
 		Name:        c.Name,
 		Position:    pos,
@@ -126,10 +126,10 @@ func JoinLobby(event Event, c *Client) error {
 
 	c.egress <- lobbyJoined
 
-	var playerJoinedPayload PlayerJoinedEvent
-	playerJoinedPayload.Player = *p
+	var memberJoinedPayload MemberJoinedEvent
+	memberJoinedPayload.Member = *p
 
-	playerJoined, err := newEvent(EventPlayerJoined, playerJoinedPayload)
+	memberJoined, err := newEvent(EventMemberJoined, memberJoinedPayload)
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func JoinLobby(event Event, c *Client) error {
 	ignored := ClientList{
 		c.UserID: c,
 	}
-	lobby.broadcast(playerJoined, ignored)
+	lobby.broadcast(memberJoined, ignored)
 
 	return nil
 }
@@ -183,7 +183,7 @@ func StartGame(event Event, c *Client) error {
 
 	if c.UserID != l.HostID {
 		return ClientError{
-			Code:    "PLAYER_NOT_HOST",
+			Code:    "MEMBER_NOT_HOST",
 			Message: fmt.Sprintf("User (%v) is not lobby host (%v)", c.UserID[:6], l.HostID[:6]),
 		}
 	}
@@ -195,20 +195,20 @@ func StartGame(event Event, c *Client) error {
 		}
 	}
 
-	if len(l.players) <= 1 {
+	if len(l.members) <= 1 {
 		return ClientError{
-			Code:    "NOT_ENOUGH_PLAYERS",
-			Message: "Cannot start lobby with less than 2 players",
+			Code:    "NOT_ENOUGH_MEMBERS",
+			Message: "Cannot start lobby with less than 2 members",
 		}
 	}
 
-	gamePlayers := make(map[string]struct{ Position int })
+	gameMembers := make(map[string]struct{ Position int })
 
-	for k, v := range l.players { // TODO: Fix this BS
-		gamePlayers[k] = struct{ Position int }{Position: v.Position}
+	for k, v := range l.members { // TODO: Fix this BS
+		gameMembers[k] = struct{ Position int }{Position: v.Position}
 	}
 
-	l.game = game.InitializeGame(gamePlayers)
+	l.game = game.InitializeGame(gameMembers)
 	l.InGame = true
 
 	snapshot := l.Snapshot()
@@ -216,15 +216,15 @@ func StartGame(event Event, c *Client) error {
 	l.GenerateSessions()
 
 	for _, cl := range l.clients {
-		p := l.players[cl.UserID]
+		p := l.members[cl.UserID]
 
 		lobbySnapshot := snapshot
 		lobbySnapshot.Position = p.Position
-		lobbySnapshot.GameState = l.game.StateFor(cl.UserID)
+		lobbySnapshot.GameState = l.game.SnapshotFor(cl.UserID)
 
 		var gameStartedPayload GameStartedEvent
 		gameStartedPayload.Lobby = lobbySnapshot
-		gameStartedPayload.Session = l.players[cl.UserID].session
+		gameStartedPayload.Session = l.members[cl.UserID].session
 
 		gameStarted, err := newEvent(EventGameStarted, gameStartedPayload)
 		if err != nil {
@@ -266,7 +266,7 @@ func RejoinLobby(event Event, c *Client) error {
 		}
 	}
 
-	// FIXME: Should we really give the newer client the older ID? Should Player have its own "lobby-specific ID", then clients have their own ID?
+	// FIXME: Should we really give the newer client the older ID? Should Member have its own "lobby-specific ID", then clients have their own ID?
 	if userID != c.UserID {
 		return ClientError{
 			Code:    "INCORRECT_USER_ID",
@@ -274,10 +274,10 @@ func RejoinLobby(event Event, c *Client) error {
 		}
 	}
 
-	p := lobby.players[c.UserID]
+	p := lobby.members[c.UserID]
 
 	if p == nil {
-		return errors.New("Failed to locate player")
+		return errors.New("Failed to locate member")
 	}
 
 	c.lobby = lobby
@@ -295,10 +295,10 @@ func RejoinLobby(event Event, c *Client) error {
 
 	c.egress <- lobbyRejoined
 
-	var playerRejoinedPayload PlayerRejoinedEvent
-	playerRejoinedPayload.UserID = c.UserID
+	var memberRejoinedPayload MemberRejoinedEvent
+	memberRejoinedPayload.UserID = c.UserID
 
-	playerRejoined, err := newEvent(EventPlayerRejoined, playerRejoinedPayload)
+	memberRejoined, err := newEvent(EventMemberRejoined, memberRejoinedPayload)
 	if err != nil {
 		return err
 	}
@@ -306,7 +306,7 @@ func RejoinLobby(event Event, c *Client) error {
 	ignored := ClientList{
 		c.UserID: c,
 	}
-	lobby.broadcast(playerRejoined, ignored)
+	lobby.broadcast(memberRejoined, ignored)
 
 	return nil
 }

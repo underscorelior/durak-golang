@@ -10,7 +10,7 @@ import (
 
 type Game struct {
 	deck    []Card
-	players map[string]*PlayerState
+	players map[string]*Player
 
 	Order TableOrder
 	Trump Card
@@ -84,9 +84,9 @@ func (g *Game) StartNextTurn(initialAttacker string) {
 // TODO: Fix the argument type
 func InitializeGame(players map[string]struct{ Position int }) *Game {
 	var g Game
-	g.players = make(map[string]*PlayerState, len(players))
+	g.players = make(map[string]*Player, len(players))
 	for k, v := range players {
-		g.players[k] = &PlayerState{Position: v.Position}
+		g.players[k] = &Player{Position: v.Position}
 	}
 
 	g.deck = CreateDeck()

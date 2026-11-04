@@ -15,8 +15,8 @@ import (
 	"github.com/google/uuid"
 )
 
-type PlayerList map[string]*Player // UserID -> Player
-type Player struct {
+type MemberList map[string]*Member // UserID -> Member
+type Member struct {
 	Name        string `json:"name"`
 	UserID      string `json:"user_id"`
 	Position    int    `json:"position"`
@@ -32,7 +32,7 @@ type Lobby struct {
 	LobbyCode string
 	sync.RWMutex
 
-	MaxPlayers int
+	MaxMembers int
 	IsHidden   bool
 	InGame     bool
 	positions  []bool
@@ -41,7 +41,7 @@ type Lobby struct {
 	HostID   string
 	sessions map[string]string // SessionToken -> UserID
 	clients  ClientList
-	players  PlayerList
+	members  MemberList
 	game     *game.Game
 
 	manager *Manager
@@ -52,20 +52,20 @@ type LobbySnapshot struct {
 	HostID     string    `json:"host_id"`
 	IsHidden   bool      `json:"is_hidden"`
 	InGame     bool      `json:"in_game"`
-	MaxPlayers int       `json:"max_players"`
+	MaxMembers int       `json:"max_members"`
 	CreatedAt  time.Time `json:"created_at"`
 
-	Players []Player `json:"players"`
+	Members []Member `json:"members"`
 
-	Position  int                     `json:"position"`
-	GameState *game.GameStateSnapshot `json:"game_state,omitempty"`
+	Position  int            `json:"position"`
+	GameState *game.Snapshot `json:"game_state,omitempty"`
 }
 
 type LobbyPreview struct {
 	LobbyCode   string    `json:"lobby_code"`
 	HostName    string    `json:"host_name"`
-	PlayerCount int       `json:"player_count"`
-	MaxPlayers  int       `json:"max_players"`
+	MemberCount int       `json:"member_count"`
+	MaxMembers  int       `json:"max_members"`
 	CreatedAt   time.Time `json:"created_at"`
 
 	IsOpen bool `json:"is_open"` // TODO: Need to allow user to join once started if they have a rejoin session token
@@ -80,14 +80,14 @@ type Session struct {
 func (m *Manager) NewLobby(userID string) *Lobby {
 	l := &Lobby{
 		LobbyCode:  m.GenerateLobbyCode(5),
-		MaxPlayers: 4,
+		MaxMembers: 4,
 		IsHidden:   false,
 		InGame:     false,
 		HostID:     userID,
 		CreatedAt:  time.Now(),
 
 		clients:   make(ClientList),
-		players:   make(PlayerList),
+		members:   make(MemberList),
 		positions: make([]bool, 4),
 		manager:   m,
 	}
@@ -124,12 +124,11 @@ func (m *Manager) MenuLobbies() []LobbyPreview {
 			continue
 		}
 
-		pc := len(l.players)
+		pc := len(l.members)
 
-		// TODO: Find a better definition of "isOpen"
-		isOpen := pc < l.MaxPlayers && !l.InGame
+		isOpen := pc < l.MaxMembers && !l.InGame
 
-		host, ok := l.players[l.HostID]
+		host, ok := l.members[l.HostID]
 		hostName := "N/A"
 
 		if ok {
@@ -139,8 +138,8 @@ func (m *Manager) MenuLobbies() []LobbyPreview {
 		lobbyPreview := LobbyPreview{
 			LobbyCode:   l.LobbyCode,
 			HostName:    hostName,
-			PlayerCount: pc,
-			MaxPlayers:  l.MaxPlayers,
+			MemberCount: pc,
+			MaxMembers:  l.MaxMembers,
 			CreatedAt:   l.CreatedAt,
 
 			IsOpen: isOpen,
@@ -157,12 +156,12 @@ func (m *Manager) MenuLobbies() []LobbyPreview {
 	return lobbies
 }
 
-func (l *Lobby) addClient(c *Client, p *Player) {
+func (l *Lobby) addClient(c *Client, p *Member) {
 	l.Lock()
 	defer l.Unlock()
 
 	l.clients[c.UserID] = c
-	l.players[c.UserID] = p
+	l.members[c.UserID] = p
 }
 
 /*
@@ -172,23 +171,23 @@ Not during a game:
 *	Free up the current position.
 *	Set the lobby in the client to null
 * 	If the host leaves:
-* 		Either transfer to next oldest player
+* 		Either transfer to next oldest member
 * 		OR close the lobby
 * 	If Lobby remains open
-* 	Notify new host somehow and send a message to all players that a player left
+* 	Notify new host somehow and send a message to all members that a member left
 
 During a game:
 *   Remove client from lobby
-*   Send a message to all players saying the client disconnected
+*   Send a message to all members saying the client disconnected
 */
 
 func (l *Lobby) removeClient(c *Client) error {
 	l.Lock()
 	defer l.Unlock()
 
-	p := l.players[c.UserID]
+	p := l.members[c.UserID]
 	if p == nil {
-		return fmt.Errorf("(removeClient) Cannot find player with UserID: %s", c.UserID)
+		return fmt.Errorf("(removeClient) Cannot find member with UserID: %s", c.UserID)
 	}
 
 	if !l.InGame {
@@ -200,14 +199,14 @@ func (l *Lobby) removeClient(c *Client) error {
 
 		c.lobby = nil
 
-		// If host disconnects while game is not active, give host to the next most recent player (that is connected.)
+		// If host disconnects while game is not active, give host to the next most recent member (that is connected.)
 		if c.UserID == l.HostID {
-			if len(l.players) <= 1 {
-				log.Printf("(removeClient) Closing lobby %v of size %v due to host leaving\n", l.LobbyCode, len(l.players))
+			if len(l.members) <= 1 {
+				log.Printf("(removeClient) Closing lobby %v of size %v due to host leaving\n", l.LobbyCode, len(l.members))
 				l.manager.removeLobby(c.lobby)
 				return nil
 			}
-			ps := slices.Collect(maps.Values(l.players))
+			ps := slices.Collect(maps.Values(l.members))
 
 			sort.Slice(ps[:], func(i, j int) bool {
 				return ps[i].JoinedAt.Before(ps[j].JoinedAt)
@@ -224,16 +223,16 @@ func (l *Lobby) removeClient(c *Client) error {
 		}
 
 		delete(l.clients, c.UserID)
-		delete(l.players, c.UserID)
+		delete(l.members, c.UserID)
 
-		// TODO: Technically, if a player presses leave, then they leave. If they dont, then they are disconnected.
-		var playerLeftPayload PlayerLeftEvent
-		playerLeftPayload = PlayerLeftEvent{
+		// TODO: Technically, if a member presses leave, then they leave. If they dont, then they are disconnected.
+		var memberLeftPayload MemberLeftEvent
+		memberLeftPayload = MemberLeftEvent{
 			UserID: c.UserID,
 			HostID: l.HostID,
 		}
 
-		playerLeft, err := newEvent(EventPlayerLeft, playerLeftPayload)
+		memberLeft, err := newEvent(EventMemberLeft, memberLeftPayload)
 		if err != nil {
 			return err
 		}
@@ -241,7 +240,7 @@ func (l *Lobby) removeClient(c *Client) error {
 		ignored := ClientList{
 			c.UserID: c,
 		}
-		l.broadcast(playerLeft, ignored)
+		l.broadcast(memberLeft, ignored)
 
 		return nil
 	}
@@ -251,24 +250,24 @@ func (l *Lobby) removeClient(c *Client) error {
 	p.DisconnectedAt = time.Now()
 	p.IsConnected = false
 
-	var playerDisconnectedPayload PlayerDisconnectedEvent
-	playerDisconnectedPayload = PlayerDisconnectedEvent{
+	var memberDisconnectedPayload MemberDisconnectedEvent
+	memberDisconnectedPayload = MemberDisconnectedEvent{
 		DisconnectedAt: p.DisconnectedAt,
 		UserID:         p.UserID,
 	}
 
-	playerDisconnected, err := newEvent(EventPlayerDisconnected, playerDisconnectedPayload)
+	memberDisconnected, err := newEvent(EventMemberDisconnected, memberDisconnectedPayload)
 	if err != nil {
 		return err
 	}
 
-	l.broadcast(playerDisconnected, make(ClientList))
+	l.broadcast(memberDisconnected, make(ClientList))
 
 	return nil
 }
 
 func (l *Lobby) nextAvailablePosition() int {
-	for i := range l.MaxPlayers {
+	for i := range l.MaxMembers {
 		if !l.positions[i] {
 			return i
 		}
@@ -278,17 +277,26 @@ func (l *Lobby) nextAvailablePosition() int {
 }
 
 func (l *Lobby) freePosition(pos int) error {
-	if pos < 0 || pos >= l.MaxPlayers {
+	if pos < 0 || pos >= l.MaxMembers {
 		return fmt.Errorf("(freePosition) Position out of bounds")
 	}
 
 	l.positions[pos] = false
 
+	for _, member := range l.members {
+		if member.Position > pos {
+			l.positions[member.Position] = false
+			l.positions[member.Position-1] = true
+			member.Position -= 1
+		}
+
+	}
+
 	return nil
 }
 
 func (l *Lobby) usePosition(pos int) error {
-	if pos < 0 || pos >= l.MaxPlayers {
+	if pos < 0 || pos >= l.MaxMembers {
 		return fmt.Errorf("(usePosition) Position out of bounds")
 	}
 
@@ -300,8 +308,8 @@ func (l *Lobby) Snapshot() LobbySnapshot {
 	snapshot := LobbySnapshot{
 		LobbyCode:  l.LobbyCode,
 		HostID:     l.HostID,
-		Players:    l.playerSnapshots(),
-		MaxPlayers: l.MaxPlayers,
+		Members:    l.memberSnapshots(),
+		MaxMembers: l.MaxMembers,
 		CreatedAt:  l.CreatedAt,
 		IsHidden:   l.IsHidden,
 		InGame:     l.InGame,
@@ -311,7 +319,7 @@ func (l *Lobby) Snapshot() LobbySnapshot {
 }
 
 func (l *Lobby) SnapshotFor(c *Client) LobbySnapshot {
-	p := l.players[c.UserID]
+	p := l.members[c.UserID]
 
 	if p == nil {
 		// TODO: ERROR HANDLING
@@ -322,19 +330,19 @@ func (l *Lobby) SnapshotFor(c *Client) LobbySnapshot {
 	snapshot.Position = p.Position
 
 	if l.game != nil {
-		snapshot.GameState = l.game.StateFor(c.UserID)
+		snapshot.GameState = l.game.SnapshotFor(c.UserID)
 	}
 
 	return snapshot
 }
 
-func (l *Lobby) playerSnapshots() []Player {
-	var lobbyPlayers []Player
-	for _, p := range l.players {
-		lobbyPlayers = append(lobbyPlayers, *p)
+func (l *Lobby) memberSnapshots() []Member {
+	var lobbyMembers []Member
+	for _, p := range l.members {
+		lobbyMembers = append(lobbyMembers, *p)
 	}
 
-	return lobbyPlayers
+	return lobbyMembers
 }
 
 func (l *Lobby) broadcast(event Event, ignored ClientList) {
@@ -364,14 +372,14 @@ func (m *Manager) GenerateLobbyCode(length int) string {
 func (l *Lobby) GenerateSessions() {
 	l.sessions = make(map[string]string)
 
-	for _, player := range l.players {
+	for _, member := range l.members {
 		session := Session{
 			LobbyCode:    l.LobbyCode,
 			SessionToken: uuid.NewString(),
 		}
 
-		player.session = session
-		l.sessions[session.SessionToken] = player.UserID
+		member.session = session
+		l.sessions[session.SessionToken] = member.UserID
 	}
 
 }

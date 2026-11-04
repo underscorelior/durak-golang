@@ -24,14 +24,14 @@ const (
 	EventLobbyCreated          = "lobby_created"
 	EventJoinLobby             = "join_lobby"
 	EventLobbyJoined           = "lobby_joined"
-	EventPlayerJoined          = "player_joined"
+	EventMemberJoined          = "member_joined"
 	EventLeaveLobby            = "leave_lobby"
 	EventLobbyLeft             = "lobby_left"
-	EventPlayerLeft            = "player_left"
-	EventPlayerDisconnected    = "player_disconnected"
+	EventMemberLeft            = "member_left"
+	EventMemberDisconnected    = "member_disconnected" // TODO: Should this not be "player_disconnected" since this only happens to active players
 	EventRejoinLobby           = "rejoin_lobby"
 	EventLobbyRejoined         = "lobby_rejoined"
-	EventPlayerRejoined        = "player_rejoined"
+	EventMemberRejoined        = "member_rejoined"
 	EventStartGame             = "start_game"
 	EventGameStarted           = "game_started"
 	EventMakeAction            = "make_action"
@@ -75,20 +75,21 @@ type LobbyJoinedEvent struct {
 	Lobby LobbySnapshot `json:"lobby"`
 }
 
-type PlayerJoinedEvent struct {
-	Player Player `json:"player"`
+type MemberJoinedEvent struct {
+	Member Member `json:"member"`
 }
 
 type LobbyLeftEvent struct {
 	Lobbies []LobbyPreview `json:"lobbies"`
 }
 
-type PlayerLeftEvent struct {
-	UserID string `json:"user_id"`
-	HostID string `json:"host_id"`
+type MemberLeftEvent struct {
+	UserID   string `json:"user_id"`
+	HostID   string `json:"host_id"`
+	Position int    `json:"position"`
 }
 
-type PlayerDisconnectedEvent struct {
+type MemberDisconnectedEvent struct {
 	UserID         string    `json:"user_id"`
 	DisconnectedAt time.Time `json:"disconnected_at"`
 }
@@ -102,7 +103,7 @@ type LobbyRejoinedEvent struct {
 	Lobby LobbySnapshot `json:"lobby"`
 }
 
-type PlayerRejoinedEvent struct {
+type MemberRejoinedEvent struct {
 	UserID string `json:"user_id"`
 }
 

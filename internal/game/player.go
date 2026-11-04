@@ -6,32 +6,32 @@ import (
 	"slices"
 )
 
-type PlayerState struct {
+type Player struct {
 	hand     []Card
 	Position int
 	Passed   bool
 }
 
-type GamePlayerState struct {
+type PlayerView struct {
 	UserID   string `json:"user_id"`
 	HandSize int    `json:"hand_size"`
 	Position int    `json:"position"`
 	Passed   bool   `json:"passed"`
 }
 
-type GameStateSnapshot struct {
-	Players      []GamePlayerState `json:"players"`
-	Hand         []Card            `json:"hand"`
-	Trump        Card              `json:"trump"`
-	DeckSize     int               `json:"deck_size"`
-	Turn         Turn              `json:"turn"`
-	FirstDefense bool              `json:"first_defense"`
+type Snapshot struct {
+	Players      []PlayerView `json:"players"`
+	Hand         []Card       `json:"hand"`
+	Trump        Card         `json:"trump"`
+	DeckSize     int          `json:"deck_size"`
+	Turn         Turn         `json:"turn"`
+	FirstDefense bool         `json:"first_defense"`
 }
 
-func (g *Game) playerSnapshots() []GamePlayerState {
-	var playerSnapshots []GamePlayerState
+func (g *Game) playerSnapshots() []PlayerView {
+	var playerSnapshots []PlayerView
 	for userID, player := range g.players {
-		playerSnapshot := GamePlayerState{
+		playerSnapshot := PlayerView{
 			UserID:   userID,
 			HandSize: len(player.hand),
 			Position: player.Position,
@@ -43,15 +43,15 @@ func (g *Game) playerSnapshots() []GamePlayerState {
 	return playerSnapshots
 }
 
-func (g *Game) StateFor(userID string) *GameStateSnapshot {
+func (g *Game) SnapshotFor(userID string) *Snapshot {
 	_, ok := g.players[userID]
 
 	if !ok {
 		// TODO: THROW ERROR HERE!!!
-		return &GameStateSnapshot{}
+		return &Snapshot{}
 	}
 
-	return &GameStateSnapshot{
+	return &Snapshot{
 		Players:      g.playerSnapshots(),
 		Hand:         g.players[userID].hand,
 		Trump:        g.Trump,
@@ -61,7 +61,7 @@ func (g *Game) StateFor(userID string) *GameStateSnapshot {
 	}
 }
 
-func (p *PlayerState) RemoveCard(card Card) []Card {
+func (p *Player) RemoveCard(card Card) []Card {
 	hand := slices.Collect(func(yield func(Card) bool) {
 		for _, c := range p.hand {
 			if c.Rank != card.Rank || c.Suit != card.Suit {
@@ -75,7 +75,7 @@ func (p *PlayerState) RemoveCard(card Card) []Card {
 	return hand
 }
 
-func (p *PlayerState) CardInHand(card Card) bool {
+func (p *Player) CardInHand(card Card) bool {
 	return slices.Contains(p.hand, card)
 }
 
@@ -85,7 +85,6 @@ type PlayerOrder struct {
 }
 type TableOrder map[string]PlayerOrder
 
-// TODO: Fix this to be better O(n) wise.
 func (g *Game) PlayerAtPosition(pos int) string {
 	for id, player := range g.players {
 		if player.Position == pos {

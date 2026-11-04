@@ -114,7 +114,7 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 			client = NewClient(conn, m, name)
 		} else {
 			log.Println("else")
-			p := l.players[userID]
+			p := l.members[userID]
 
 			client = NewClient(conn, m, p.Name)
 			client.UserID = p.UserID
@@ -153,6 +153,7 @@ func (m *Manager) addClient(c *Client) {
 	m.clients[c.UserID] = c
 }
 
+// TODO: Never seems to get called
 func (m *Manager) removeClient(c *Client) {
 	m.Lock()
 	defer m.Unlock()
@@ -177,15 +178,15 @@ func (m *Manager) broadcastMenuLobbyUpdates() {
 	}()
 
 	for range lobbyPrevTicker.C {
-		validPlayers := 0
+		validMembers := 0
 
 		for _, client := range m.clients {
 			if client.lobby == nil {
-				validPlayers += 1
+				validMembers += 1
 			}
 		}
 
-		if validPlayers == 0 || len(m.clients) <= 0 {
+		if validMembers == 0 || len(m.clients) <= 0 {
 			continue
 		}
 
@@ -211,7 +212,7 @@ func (m *Manager) broadcastMenuLobbyUpdates() {
 			}
 		}
 
-		log.Printf("(broadcastMenuLobbyUpdate) Broadcasted %v menus to %v clients\n", len(lobbyPrevPayload.Lobbies), sent)
+		log.Printf("(broadcastMenuLobbyUpdate) Broadcasted %v lobbies to %v clients\n", len(lobbyPrevPayload.Lobbies), sent)
 	}
 }
 
