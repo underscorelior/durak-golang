@@ -1,11 +1,11 @@
 type Lobby = {
 	lobby_code: string;
 	host_id: string;
-	is_private: boolean;
-	is_started: boolean;
-	max_players: number;
+	is_hidden: boolean;
+	in_game: boolean;
+	max_members: number;
 	created_at: string;
-	players: Player[];
+	members: Member[];
 	position: number;
 	game_state: GameState | null;
 };
@@ -13,12 +13,12 @@ type Lobby = {
 type LobbyPreview = {
 	lobby_code: string;
 	host_name: string;
-	player_count: number;
-	max_players: number;
+	member_count: number;
+	max_members: number;
 	created_at: string;
 
 	is_open: boolean;
-	is_playing: boolean;
+	in_game: boolean;
 };
 
 type Session = {
@@ -26,22 +26,24 @@ type Session = {
 	session_token: string;
 };
 
-type GamePlayer = {
+type Player = {
 	user_id: string;
 	hand_size: number;
 	position: number;
+	passed: boolean;
 };
 
 type GameState = {
 	// TODO: Combine both the lobby players and the game state players locally
-	players: GamePlayer[];
+	players: Player[];
 	hand: Card[];
 	trump: Card;
 	deck_size: number;
 	turn: Turn;
+	first_defense: boolean;
 };
 
-type Player = {
+type Member = {
 	user_id: string;
 	name: string;
 	position: number;
@@ -66,7 +68,6 @@ type Card = {
 type CardPair = {
 	attack_card: Card;
 	defense_card?: Card;
-	is_defended: boolean;
 };
 
 type Turn = {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { globalState } from '$lib/state/state.svelte';
-	import { fanDistance, findGamePlayerByID, findLobbyPlayerByID, shID } from '$lib/util';
+	import { EMPTY_CARD, fanDistance, findMemberByID, findPlayerByID, shID } from '$lib/util';
 	import Card from './card.svelte';
 
 	const {
@@ -12,14 +12,14 @@
 	let game_state = $derived(globalState.lobby?.game_state);
 	let hand = $derived(game_state?.hand);
 
-	let game_started = $derived(globalState.lobby?.is_started);
+	let game_started = $derived(globalState.lobby?.in_game);
 
-	let hand_size = $derived(findGamePlayerByID(user_id)?.hand_size ?? 0);
+	let hand_size = $derived(findPlayerByID(user_id)?.hand_size ?? 0);
 </script>
 
 <div style="--orientation: {orientation};" class="container">
 	<div class="nameplate">
-		{shID(user_id)} ({findLobbyPlayerByID(user_id)?.position})
+		{shID(user_id)} ({findMemberByID(user_id)?.position})
 		<br />
 		{#if game_started}{hand_size}{/if}
 	</div>
@@ -28,7 +28,7 @@
 			{#if opponent}
 				{#each Array(hand_size).keys() as index (index)}
 					<Card
-						card={{ suit: 0, rank: 0 }}
+						card={EMPTY_CARD}
 						{index}
 						distance={fanDistance(index, hand_size)}
 						inHand

@@ -54,14 +54,31 @@ export function fanDistance(index: number, length: number) {
 	return dist < 0 ? Math.ceil(dist) : Math.floor(dist);
 }
 
-export function findLobbyPlayerByID(user_id: string): Player | undefined {
-	return globalState.lobby?.players.find((p) => p.user_id === user_id);
+export function findMemberByID(user_id: string): Member | undefined {
+	const players = globalState.lobby?.members;
+
+	if (players == null) {
+		return undefined;
+	}
+	return players.find((p) => p.user_id === user_id);
 }
 
-export function findGamePlayerByID(user_id: string): GamePlayer | undefined {
+export function findPlayerByID(user_id: string): Player | undefined {
 	return globalState.lobby?.game_state?.players.find((p) => p.user_id === user_id);
+}
+
+export function cardInHand(card: Card): boolean {
+	const hand = globalState.lobby?.game_state?.hand;
+
+	if (hand == null) {
+		return false;
+	}
+
+	return hand.some((c) => card.rank === c.rank && card.suit === c.suit);
 }
 
 export function isCardEmpty(card: Card): boolean {
 	return card.rank == 0 && card.suit == 0;
 }
+
+export const EMPTY_CARD: Card = { suit: 0, rank: 0 };
