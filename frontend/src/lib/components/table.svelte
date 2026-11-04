@@ -7,9 +7,8 @@
 		canDefend,
 		canPass,
 		canTake,
-		cardDefends,
-		isAttacking,
-		isDefending
+		isAttacker,
+		isDefender
 	} from '$lib/game';
 	import Card from './card.svelte';
 	import Pair from './pair.svelte';
@@ -21,23 +20,23 @@
 	let card_pairs = $derived(game_state?.turn.table_state);
 
 	let pos = $derived(globalState.lobby?.position);
-	let max_players = $derived(globalState.lobby?.max_players);
+	let max_members = $derived(globalState.lobby?.max_members);
 
-	let players = $derived(globalState.lobby?.players ?? []);
+	let members = $derived(globalState.lobby?.members ?? []);
 
-	let game_started = $derived(globalState.lobby?.is_started);
+	let game_started = $derived(globalState.lobby?.in_game);
 
-	const playerPosOffset = (pl: Player, off: number) =>
-		pl.position == ((pos || 0) + off) % (max_players || 1);
+	const playerPosOffset = (mem: Member, off: number) =>
+		mem.position == ((pos || 0) + off) % (max_members || 1);
 
 	let player_id = $derived(globalState.user.user_id ?? '');
-	let left = $derived(players.find((pl) => playerPosOffset(pl, 1)));
-	let top = $derived(players.find((pl) => playerPosOffset(pl, 2)));
-	let right = $derived(players.find((pl) => playerPosOffset(pl, 3)));
+	let left = $derived(members.find((mem) => playerPosOffset(mem, 1)));
+	let top = $derived(members.find((mem) => playerPosOffset(mem, 2)));
+	let right = $derived(members.find((mem) => playerPosOffset(mem, 3)));
 
 	let buttonDisabled = $derived(canPass() || canTake());
-	let buttonShown = $derived(isAttacking() || isDefending());
-	let buttonText = $derived(buttonShown ? (isAttacking() ? 'Pass' : 'Take') : '');
+	let buttonShown = $derived(isAttacker() || isDefender());
+	let buttonText = $derived(buttonShown ? (isAttacker() ? 'Pass' : 'Take') : '');
 
 	function dragover(e: DragEvent) {
 		e.preventDefault();
@@ -54,24 +53,23 @@
 
 		const atk_card = card_pairs[pair].attack_card;
 
-		console.log('test', isCardEmpty(atk_card));
 
-		if (isCardEmpty(atk_card) && canAttack()) {
-			makeAction(Action.Attack, card, pair);
+		if (isCardEmpty(atk_card) && canAttack(card)) {
+			makeAction(Action.ATTACK, card, pair);
 		}
 
-		if (!isCardEmpty(atk_card) && canDefend() && cardDefends(card_pairs[pair], card)) {
-			makeAction(Action.Defense, card, pair);
+		if (!isCardEmpty(atk_card) && canDefend(card_pairs[pair], card)) {
+			makeAction(Action.DEFEND, card, pair);
 		}
 	}
 
 	function buttonAction() {
-		if (isAttacking() && canPass()) {
-			makeAction(Action.Pass);
+		if (isAttacker() && canPass()) {
+			makeAction(Action.PASS);
 		}
 
-		if (isDefending() && canTake()) {
-			makeAction(Action.Take);
+		if (isDefender() && canTake()) {
+			makeAction(Action.TAKE);
 		}
 	}
 </script>

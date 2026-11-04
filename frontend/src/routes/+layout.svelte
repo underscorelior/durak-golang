@@ -7,8 +7,8 @@
 
 	let { children } = $props();
 
-	let name = $state(globalState.user.name || '')
-	let text = $state("")
+	let name = $state(globalState.user.name ?? '');
+	let text = $state('');
 
 	onMount(() => {
 		connectWebsocket();
@@ -22,10 +22,14 @@
 {@render children()}
 
 <footer style="margin-top: 50px;">
-	<input placeholder="name" bind:value={name}/>
-	<button onclick={()=>updateUser(name)}>Update</button>
+	<input placeholder="name" bind:value={name} />
+	<button onclick={() => updateUser(name)}>Update</button>
 	<div>
 		<textarea bind:value={text}></textarea>
-		<button onclick={()=>{text = JSON.stringify(globalState || {'undef': undefined})}}>update</button>
+		<button
+			onclick={() => {
+				text = JSON.stringify(globalState ?? { undef: undefined });
+			}}>update</button
+		>
 	</div>
 </footer>
