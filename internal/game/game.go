@@ -19,7 +19,6 @@ type Game struct {
 	FirstDefense bool
 }
 
-// TODO: Find a better way to do client/server err handling
 type Error struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
@@ -112,7 +111,7 @@ func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *i
 	p := g.players[userID]
 
 	if p == nil {
-		return Error{
+		return &Error{
 			Code:    "INVALID_USER",
 			Message: "Provided user ID is not in the game",
 		}
@@ -186,7 +185,7 @@ func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *i
 		return nil
 	}
 
-	return Error{
+	return &Error{
 		Code:    "INVALID_ACTION",
 		Message: fmt.Sprintf("Action event provided invalid action: %v", action),
 	}

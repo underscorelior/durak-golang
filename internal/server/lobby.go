@@ -228,8 +228,9 @@ func (l *Lobby) removeClient(c *Client) error {
 		// TODO: Technically, if a member presses leave, then they leave. If they dont, then they are disconnected.
 		var memberLeftPayload MemberLeftEvent
 		memberLeftPayload = MemberLeftEvent{
-			UserID: c.UserID,
-			HostID: l.HostID,
+			UserID:   c.UserID,
+			HostID:   l.HostID,
+			Position: p.Position,
 		}
 
 		memberLeft, err := newEvent(EventMemberLeft, memberLeftPayload)
@@ -318,22 +319,25 @@ func (l *Lobby) Snapshot() LobbySnapshot {
 	return snapshot
 }
 
-func (l *Lobby) SnapshotFor(c *Client) LobbySnapshot {
+func (l *Lobby) SnapshotFor(c *Client) *LobbySnapshot {
 	p := l.members[c.UserID]
 
 	if p == nil {
-		// TODO: ERROR HANDLING
-		return LobbySnapshot{}
+		return nil
 	}
 
 	snapshot := l.Snapshot()
 	snapshot.Position = p.Position
 
 	if l.game != nil {
-		snapshot.GameState = l.game.SnapshotFor(c.UserID)
+		gameState := l.game.SnapshotFor(c.UserID)
+		if gameState == nil {
+			return nil
+		}
+		snapshot.GameState = gameState
 	}
 
-	return snapshot
+	return &snapshot
 }
 
 func (l *Lobby) memberSnapshots() []Member {

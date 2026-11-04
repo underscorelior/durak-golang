@@ -47,8 +47,7 @@ func (g *Game) SnapshotFor(userID string) *Snapshot {
 	_, ok := g.players[userID]
 
 	if !ok {
-		// TODO: THROW ERROR HERE!!!
-		return &Snapshot{}
+		return nil
 	}
 
 	return &Snapshot{
@@ -95,7 +94,6 @@ func (g *Game) PlayerAtPosition(pos int) string {
 	return ""
 }
 
-// TODO: Account for gaps in position
 func (g *Game) SetupTableOrder() {
 	numPlayers := len(g.players)
 	tableOrder := make(TableOrder, numPlayers)

@@ -135,9 +135,8 @@ type TurnsPassedEvent struct {
 }
 
 type ErrorEvent struct {
-	Code     string `json:"code"`
-	Message  string `json:"message"`
-	EventFor string `json:"event_for"`
+	ClientError
+	ErrorFor string `json:"error_for"`
 }
 
 func newEvent(eventType string, data any) (Event, error) {

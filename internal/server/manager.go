@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/rand"
 	"durak/internal/game"
 	"encoding/json"
 	"errors"
@@ -54,6 +55,10 @@ func (m *Manager) setupEventHandlers() {
 	m.handlers[EventMakeAction] = MakeAction
 }
 
+func shortID() string {
+	return rand.Text()[:8]
+}
+
 func (m *Manager) routeEvent(event Event, c *Client) error {
 	handler, ok := m.handlers[event.Type]
 	if !ok {
@@ -75,8 +80,9 @@ func (m *Manager) routeEvent(event Event, c *Client) error {
 		return c.sendError(&ClientError{Code: ge.Code, Message: ge.Message}, event.Type)
 	}
 
-	log.Printf("(routeEvent) handler %s: %v\n", event.Type, err)
-	return c.sendError(&ClientError{Code: "INTERNAL", Message: fmt.Sprintf("Something went wrong. %v", err.Error())}, event.Type)
+	id := shortID()
+	log.Printf("(routeEvent) [%s] handler %s: %v\n", id, event.Type, err)
+	return c.sendError(&ClientError{Code: "INTERNAL", Message: fmt.Sprintf("Something went wrong. (ref %s)", id)}, event.Type)
 }
 
 // TODO: Clean up serveWS
@@ -139,8 +145,12 @@ func (m *Manager) ServeWS(w http.ResponseWriter, r *http.Request) {
 
 	connEst, err := newEvent(EventConnectionEstablished, connEstPayload)
 	if err != nil {
-		err := client.sendError(&ClientError{Code: "INTERNAL", Message: fmt.Sprintf("Something went wrong. %v", err.Error())}, EventConnectionEstablished)
-		fmt.Println("(ServeWS) Failed to send message:", err)
+		id := shortID()
+		log.Printf("(ServeWS) [%s] %v\n", id, err.Error())
+		err := client.sendError(&ClientError{Code: "INTERNAL", Message: fmt.Sprintf("Something went wrong. (ref %s)", id)}, EventConnectionEstablished)
+		if err != nil {
+			fmt.Println("(ServeWS) Failed to send message:", err)
+		}
 	}
 
 	client.egress <- connEst

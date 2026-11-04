@@ -13,14 +13,12 @@ import (
 const pongWait = 10 * time.Second        // how long to wait for a pong response, if 10s is up, kick
 const pingInterval = (pongWait * 9) / 10 // Has to be lower than pongWait, this is the interval for the client to respond
 
-// TODO: Find a proper location for this struct
 type ClientError struct {
-	Code     string
-	Message  string
-	ErrorFor string
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
-func (e ClientError) Error() string {
+func (e *ClientError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Code, e.Message)
 }
 
@@ -131,11 +129,9 @@ func (c *Client) pongHandler(pongMsg string) error {
 }
 
 func (c *Client) sendError(ce *ClientError, eventType string) error {
-	if ce.ErrorFor == "" {
-		ce.ErrorFor = eventType
-	}
+	errorEvent := ErrorEvent{ClientError: *ce, ErrorFor: eventType}
 
-	payload, err := json.Marshal(ce)
+	payload, err := json.Marshal(errorEvent)
 	if err != nil {
 		return fmt.Errorf("(sendError) Error when marshalling ErrorEvent: %w", err)
 	}
