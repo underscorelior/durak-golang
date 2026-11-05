@@ -230,11 +230,11 @@ func StartGame(event Event, c *Client) error {
 		if gameState == nil {
 			return fmt.Errorf("(StartGame) No snapshot for user %s in lobby %s", cl.UserID, l.LobbyCode)
 		}
-		lobbySnapshot.GameState = gameState
 
 		var gameStartedPayload GameStartedEvent
 		gameStartedPayload.Lobby = lobbySnapshot
 		gameStartedPayload.Session = l.members[cl.UserID].session
+		gameStartedPayload.GameState = *gameState // TODO: for gameStarted, I dont think we want to provide the turn state
 
 		gameStarted, err := newEvent(EventGameStarted, gameStartedPayload)
 		if err != nil {

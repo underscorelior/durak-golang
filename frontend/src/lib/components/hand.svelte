@@ -9,7 +9,7 @@
 		orientation
 	}: { opponent: boolean; user_id: string; orientation: number } = $props();
 
-	let game_state = $derived(globalState.lobby?.game_state);
+	let game_state = $derived(globalState?.game_state);
 	let hand = $derived(game_state?.hand);
 
 	let game_started = $derived(globalState.lobby?.in_game);

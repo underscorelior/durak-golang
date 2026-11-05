@@ -86,6 +86,7 @@ type RejoinLobbyPayload = {
 
 type LobbyRejoinedPayload = {
 	lobby: Lobby;
+	game_state: GameState;
 };
 
 type PlayerRejoinedPayload = {
@@ -97,6 +98,7 @@ type StartGamePayload = object;
 type GameStartedPayload = {
 	lobby: Lobby;
 	session: Session;
+	game_state: GameState;
 };
 
 type MakeActionPayload = {

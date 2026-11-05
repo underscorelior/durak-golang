@@ -17,7 +17,8 @@ import (
 
 type MemberList map[string]*Member // UserID -> Member
 type Member struct {
-	Name        string `json:"name"`
+	Name string `json:"name"`
+	// TODO: Have each member have a separate "LOBBY_ID" which is public, while keeping user id private, to allow for using cookies
 	UserID      string `json:"user_id"`
 	Position    int    `json:"position"`
 	IsConnected bool   `json:"is_connected"`
@@ -57,8 +58,7 @@ type LobbySnapshot struct {
 
 	Members []Member `json:"members"`
 
-	Position  int            `json:"position"`
-	GameState *game.Snapshot `json:"game_state,omitempty"`
+	Position int `json:"position"`
 }
 
 type LobbyPreview struct {
@@ -331,14 +331,6 @@ func (l *Lobby) SnapshotFor(c *Client) *LobbySnapshot {
 
 	snapshot := l.Snapshot()
 	snapshot.Position = p.Position
-
-	if l.game != nil {
-		gameState := l.game.SnapshotFor(c.UserID)
-		if gameState == nil {
-			return nil
-		}
-		snapshot.GameState = gameState
-	}
 
 	return &snapshot
 }

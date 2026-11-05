@@ -85,16 +85,11 @@ export function playerDisconnectedHandler(payload: EventPayloads[GameEvent.Playe
 export function lobbyRejoinedHandler(payload: EventPayloads[GameEvent.LobbyRejoined]) {
 	globalState.lobby = payload.lobby;
 
-	globalState.lobby.game_state = {
-		...globalState.lobby.game_state,
-		hand: sortHand(globalState.lobby.game_state?.hand),
-		turn: {
-			...payload.lobby.game_state?.turn,
-			attacker_ids: Object.keys(
-				payload.lobby.game_state?.turn.attacker_ids as never as { [key: string]: boolean } // TODO: Fix this up so that it makes better sense, maybe a different way within golang itself
-			)
-		}
-	} as GameState; // TODO: Fix thsi?
+	globalState.game_state = {
+		...globalState.game_state,
+		hand: sortHand(globalState.game_state?.hand),
+		turn: payload.game_state.turn
+	} as GameState;
 }
 
 export function playerRejoinedHandler(payload: EventPayloads[GameEvent.PlayerRejoined]) {
@@ -111,24 +106,17 @@ export function gameStartedHandler(payload: EventPayloads[GameEvent.GameStarted]
 	setLocalSession(session);
 
 	globalState.lobby = payload.lobby;
-
-	globalState.lobby.game_state = {
-		...globalState.lobby.game_state,
-		hand: sortHand(globalState.lobby.game_state?.hand),
-		turn: {
-			...payload.lobby.game_state?.turn,
-			attacker_ids: Object.keys(
-				payload.lobby.game_state?.turn.attacker_ids as never as { [key: string]: boolean } // TODO: Fix this up so that it makes better sense, maybe a different way within golang itself
-			)
-		}
-	} as GameState; // TODO: Fix thsi?
+	globalState.game_state = {
+		...payload.game_state,
+		hand: sortHand(payload.game_state.hand)
+	} as GameState;
 }
 
 export function actionMadeHandler(payload: EventPayloads[GameEvent.ActionMade]) {
-	const game_state = globalState.lobby?.game_state;
+	const game_state = globalState.game_state;
 
-	if (!game_state || !globalState.lobby?.game_state) {
-		alert('ERROR LOBBY OR GAME STATE NULL');
+	if (!game_state || !globalState.game_state) {
+		alert('ERROR GAME STATE NULL');
 		return;
 	}
 	const playerIndex = game_state.players.findIndex((gp) => gp.user_id == payload.user_id);
@@ -152,7 +140,7 @@ export function actionMadeHandler(payload: EventPayloads[GameEvent.ActionMade]) 
 
 		game_state.players[playerIndex].hand_size -= 1;
 		if (user_id == globalState.user.user_id) {
-			globalState.lobby.game_state.hand = game_state.hand.filter(
+			globalState.game_state.hand = game_state.hand.filter(
 				(c) => c.rank != card?.rank || c.suit != card?.suit
 			);
 		}

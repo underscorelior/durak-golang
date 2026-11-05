@@ -100,7 +100,8 @@ type RejoinLobbyEvent struct {
 }
 
 type LobbyRejoinedEvent struct {
-	Lobby LobbySnapshot `json:"lobby"`
+	Lobby     LobbySnapshot `json:"lobby"`
+	GameState game.Snapshot `json:"game_state"`
 }
 
 type MemberRejoinedEvent struct {
@@ -108,8 +109,9 @@ type MemberRejoinedEvent struct {
 }
 
 type GameStartedEvent struct {
-	Lobby   LobbySnapshot `json:"lobby"`
-	Session Session       `json:"session"`
+	Lobby     LobbySnapshot `json:"lobby"`
+	Session   Session       `json:"session"`
+	GameState game.Snapshot `json:"game_state"`
 }
 
 type MakeActionEvent struct {
@@ -127,7 +129,6 @@ type ActionMadeEvent struct {
 }
 
 type CardsTakenEvent struct {
-	UserID        string    `json:"user_id"`
 	TossInTimeout time.Time `json:"toss_in_timeout"`
 }
 

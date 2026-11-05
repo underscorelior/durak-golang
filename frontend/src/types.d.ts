@@ -7,7 +7,6 @@ type Lobby = {
 	created_at: string;
 	members: Member[];
 	position: number;
-	game_state: GameState | null;
 };
 
 type LobbyPreview = {
@@ -34,7 +33,6 @@ type Player = {
 };
 
 type GameState = {
-	// TODO: Combine both the lobby players and the game state players locally
 	players: Player[];
 	hand: Card[];
 	trump: Card;

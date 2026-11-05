@@ -64,11 +64,11 @@ export function findMemberByID(user_id: string): Member | undefined {
 }
 
 export function findPlayerByID(user_id: string): Player | undefined {
-	return globalState.lobby?.game_state?.players.find((p) => p.user_id === user_id);
+	return globalState.game_state?.players.find((p) => p.user_id === user_id);
 }
 
 export function cardInHand(card: Card): boolean {
-	const hand = globalState.lobby?.game_state?.hand;
+	const hand = globalState.game_state?.hand;
 
 	if (hand == null) {
 		return false;

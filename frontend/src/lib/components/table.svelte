@@ -15,7 +15,7 @@
 	import Hand from './hand.svelte';
 	import { isCardEmpty } from '$lib/util';
 
-	let game_state = $derived(globalState.lobby?.game_state);
+	let game_state = $derived(globalState?.game_state);
 
 	let card_pairs = $derived(game_state?.turn.table_state);
 
