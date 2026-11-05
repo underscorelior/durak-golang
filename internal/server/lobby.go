@@ -194,18 +194,24 @@ func (l *Lobby) removeClient(c *Client) error {
 		err := l.freePosition(p.Position)
 
 		if err != nil {
-			return fmt.Errorf("(removeClient) Cant free position: %s", err)
+			return err
 		}
 
 		c.lobby = nil
+
+		delete(l.clients, c.UserID)
+		delete(l.members, c.UserID)
 
 		// If host disconnects while game is not active, give host to the next most recent member (that is connected.)
 		if c.UserID == l.HostID {
 			if len(l.members) <= 1 {
 				log.Printf("(removeClient) Closing lobby %v of size %v due to host leaving\n", l.LobbyCode, len(l.members))
-				l.manager.removeLobby(c.lobby)
+
+				l.manager.removeLobby(l)
+
 				return nil
 			}
+
 			ps := slices.Collect(maps.Values(l.members))
 
 			sort.Slice(ps[:], func(i, j int) bool {
@@ -221,9 +227,6 @@ func (l *Lobby) removeClient(c *Client) error {
 				}
 			}
 		}
-
-		delete(l.clients, c.UserID)
-		delete(l.members, c.UserID)
 
 		// TODO: Technically, if a member presses leave, then they leave. If they dont, then they are disconnected.
 		var memberLeftPayload MemberLeftEvent
