@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"slices"
 )
 
 // Checks if a player is allowed to be placed among existing cards
@@ -43,7 +44,7 @@ func (g *Game) CanTake(userID string) error {
 func (g *Game) CanPass(userID string) error {
 	t := g.Turn
 
-	if _, exists := t.AttackerIDs[userID]; !exists {
+	if slices.Contains(t.AttackerIDs, userID) {
 		return &Error{
 			Code:    "INVALID_ROLE",
 			Message: "This user is not an attacker",
@@ -108,7 +109,7 @@ func (g *Game) CanAttack(userID string, card Card, pairIndex int) error {
 		return nil
 	}
 
-	if _, exists := t.AttackerIDs[userID]; !exists {
+	if slices.Contains(t.AttackerIDs, userID) {
 		return &Error{
 			Code:    "INVALID_ROLE",
 			Message: "This user is not an attacker",

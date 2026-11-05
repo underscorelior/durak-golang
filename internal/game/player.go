@@ -43,7 +43,7 @@ func (g *Game) playerSnapshots() []PlayerView {
 	return playerSnapshots
 }
 
-func (g *Game) SnapshotFor(userID string) *Snapshot {
+func (g *Game) SnapshotFor(userID string) *Snapshot { // TODO: Two versions of snapshot, lobby and game. need to fix naming.
 	_, ok := g.players[userID]
 
 	if !ok {
@@ -117,9 +117,9 @@ func (g *Game) SetupTableOrder() {
 	g.Order = tableOrder
 }
 
-func (g *Game) AdjacentTo(userID string) map[string]bool {
+func (g *Game) AdjacentTo(userID string) []string {
 	o := g.Order[userID]
-	return map[string]bool{o.Next: true, o.Previous: true}
+	return []string{o.Next, o.Previous}
 }
 
 func calcPosOffset(pos, offset, num int) int {

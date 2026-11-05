@@ -68,7 +68,7 @@ func (g *Game) DistributeCards() {
 
 	g.DrawCards(ia, 6-len(g.players[ia].hand))
 
-	for attacker := range g.Turn.AttackerIDs {
+	for _, attacker := range g.Turn.AttackerIDs {
 		if attacker != ia {
 			g.DrawCards(attacker, 6-len(g.players[attacker].hand))
 		}

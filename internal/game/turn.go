@@ -5,8 +5,8 @@ type Turn struct {
 	DefenderID        string     `json:"defender_id"`
 	InitialAttackerID string     `json:"initial_attacker_id"`
 
-	AttackerIDs map[string]bool `json:"attacker_ids"` // Figure out how to do this, i doubt this is a good pattern
-	Phase       TurnPhase       `json:"phase"`
+	AttackerIDs []string  `json:"attacker_ids"`
+	Phase       TurnPhase `json:"phase"`
 }
 
 type TurnPhase int
@@ -67,7 +67,7 @@ func (g *Game) ResetPassingState() {
 }
 
 func (g *Game) AllAttackersPassed() bool {
-	for id := range g.Turn.AttackerIDs {
+	for _, id := range g.Turn.AttackerIDs {
 		if !g.players[id].Passed {
 			return false
 		}
