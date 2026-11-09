@@ -15,22 +15,27 @@ import (
 	"github.com/google/uuid"
 )
 
-type MemberList map[string]*Member // UserID -> Member
+type MemberID string
+type LobbyCode string
+type SessionToken string
+
 type Member struct {
-	Name string `json:"name"`
-	// TODO: Have each member have a separate "LOBBY_ID" which is public, while keeping user id private, to allow for using cookies
-	UserID      string `json:"user_id"`
-	Position    int    `json:"position"`
-	IsConnected bool   `json:"is_connected"`
+	userID UserID
+
+	Name        string   `json:"name"`
+	MemberID    MemberID `json:"member_id"`
+	Position    int      `json:"position"`
+	IsConnected bool     `json:"is_connected"`
 
 	session        Session
 	JoinedAt       time.Time `json:"joined_at"`
 	DisconnectedAt time.Time `json:"disconnected_at,omitempty"`
 }
+type MemberList map[UserID]*Member // UserID -> Member
 
-type LobbyList map[string]*Lobby // LobbyCode -> Lobby
+type LobbyList map[LobbyCode]*Lobby // LobbyCode -> Lobby
 type Lobby struct {
-	LobbyCode string
+	Code LobbyCode
 	sync.RWMutex
 
 	MaxMembers int
@@ -39,18 +44,18 @@ type Lobby struct {
 	positions  []bool
 	CreatedAt  time.Time
 
-	HostID   string
-	sessions map[string]string // SessionToken -> UserID
-	clients  ClientList
-	members  MemberList
-	game     *game.Game
+	hostUserID UserID
+	sessions   map[SessionToken]UserID // SessionToken -> UserID
+	clients    ClientList
+	members    MemberList
+	game       *game.Game
 
 	manager *Manager
 }
 
 type LobbySnapshot struct {
-	LobbyCode  string    `json:"lobby_code"`
-	HostID     string    `json:"host_id"`
+	LobbyCode  LobbyCode `json:"lobby_code"`
+	HostID     MemberID  `json:"host_id"`
 	IsHidden   bool      `json:"is_hidden"`
 	InGame     bool      `json:"in_game"`
 	MaxMembers int       `json:"max_members"`
@@ -62,7 +67,7 @@ type LobbySnapshot struct {
 }
 
 type LobbyPreview struct {
-	LobbyCode   string    `json:"lobby_code"`
+	LobbyCode   LobbyCode `json:"lobby_code"`
 	HostName    string    `json:"host_name"`
 	MemberCount int       `json:"member_count"`
 	MaxMembers  int       `json:"max_members"`
@@ -73,17 +78,17 @@ type LobbyPreview struct {
 }
 
 type Session struct {
-	LobbyCode    string `json:"lobby_code"`
-	SessionToken string `json:"session_token"`
+	LobbyCode    LobbyCode    `json:"lobby_code"`
+	SessionToken SessionToken `json:"session_token"`
 }
 
-func (m *Manager) NewLobby(userID string) *Lobby {
+func (m *Manager) NewLobby(userID UserID) *Lobby {
 	l := &Lobby{
-		LobbyCode:  m.GenerateLobbyCode(5),
+		Code:       m.GenerateLobbyCode(5),
 		MaxMembers: 4,
 		IsHidden:   false,
 		InGame:     false,
-		HostID:     userID,
+		hostUserID: userID,
 		CreatedAt:  time.Now(),
 
 		clients:   make(ClientList),
@@ -99,7 +104,7 @@ func (m *Manager) addLobby(lobby *Lobby) {
 	m.Lock()
 	defer m.Unlock()
 
-	m.lobbies[lobby.LobbyCode] = lobby
+	m.lobbies[lobby.Code] = lobby
 }
 
 func (m *Manager) removeLobby(lobby *Lobby) {
@@ -110,9 +115,9 @@ func (m *Manager) removeLobby(lobby *Lobby) {
 		lobby.removeClient(c)
 	}
 
-	// if _, ok := m.lobbies[lobby.LobbyCode]; ok {
+	// if _, ok := m.lobbies[lobby.Code]; ok {
 	// Handle some sort of lobby deletion (DB stuff)
-	delete(m.lobbies, lobby.LobbyCode)
+	delete(m.lobbies, lobby.Code)
 	// }
 }
 
@@ -128,7 +133,7 @@ func (m *Manager) MenuLobbies() []LobbyPreview {
 
 		isOpen := pc < l.MaxMembers && !l.InGame
 
-		host, ok := l.members[l.HostID]
+		host, ok := l.members[l.hostUserID]
 		hostName := "N/A"
 
 		if ok {
@@ -136,7 +141,7 @@ func (m *Manager) MenuLobbies() []LobbyPreview {
 		}
 
 		lobbyPreview := LobbyPreview{
-			LobbyCode:   l.LobbyCode,
+			LobbyCode:   l.Code,
 			HostName:    hostName,
 			MemberCount: pc,
 			MaxMembers:  l.MaxMembers,
@@ -185,13 +190,13 @@ func (l *Lobby) removeClient(c *Client) error {
 	l.Lock()
 	defer l.Unlock()
 
-	p := l.members[c.UserID]
-	if p == nil {
+	m := l.members[c.UserID]
+	if m == nil {
 		return fmt.Errorf("(removeClient) Cannot find member with UserID: %s", c.UserID)
 	}
 
 	if !l.InGame {
-		err := l.freePosition(p.Position)
+		err := l.freePosition(m.Position)
 
 		if err != nil {
 			return err
@@ -203,9 +208,9 @@ func (l *Lobby) removeClient(c *Client) error {
 		delete(l.members, c.UserID)
 
 		// If host disconnects while game is not active, give host to the next most recent member (that is connected.)
-		if c.UserID == l.HostID {
+		if c.UserID == l.hostUserID {
 			if len(l.members) <= 1 {
-				log.Printf("(removeClient) Closing lobby %v of size %v due to host leaving\n", l.LobbyCode, len(l.members))
+				log.Printf("(removeClient) Closing lobby %v of size %v due to host leaving\n", l.Code, len(l.members))
 
 				l.manager.removeLobby(l)
 
@@ -220,9 +225,9 @@ func (l *Lobby) removeClient(c *Client) error {
 
 			fmt.Println(ps)
 
-			for _, pl := range ps {
-				if pl.UserID != l.HostID && pl.IsConnected {
-					l.HostID = pl.UserID
+			for _, mem := range ps {
+				if mem.userID != l.hostUserID && mem.IsConnected {
+					l.hostUserID = mem.userID
 					break
 				}
 			}
@@ -231,9 +236,9 @@ func (l *Lobby) removeClient(c *Client) error {
 		// TODO: Technically, if a member presses leave, then they leave. If they dont, then they are disconnected.
 		var memberLeftPayload MemberLeftEvent
 		memberLeftPayload = MemberLeftEvent{
-			UserID:   c.UserID,
-			HostID:   l.HostID,
-			Position: p.Position,
+			MemberID: m.MemberID,
+			HostID:   l.hostMemberID(),
+			Position: m.Position,
 		}
 
 		memberLeft, err := newEvent(EventMemberLeft, memberLeftPayload)
@@ -251,13 +256,13 @@ func (l *Lobby) removeClient(c *Client) error {
 
 	delete(l.clients, c.UserID)
 
-	p.DisconnectedAt = time.Now()
-	p.IsConnected = false
+	m.DisconnectedAt = time.Now()
+	m.IsConnected = false
 
 	var memberDisconnectedPayload MemberDisconnectedEvent
 	memberDisconnectedPayload = MemberDisconnectedEvent{
-		DisconnectedAt: p.DisconnectedAt,
-		UserID:         p.UserID,
+		MemberID:       m.MemberID,
+		DisconnectedAt: m.DisconnectedAt,
 	}
 
 	memberDisconnected, err := newEvent(EventMemberDisconnected, memberDisconnectedPayload)
@@ -310,8 +315,8 @@ func (l *Lobby) usePosition(pos int) error {
 
 func (l *Lobby) Snapshot() LobbySnapshot {
 	snapshot := LobbySnapshot{
-		LobbyCode:  l.LobbyCode,
-		HostID:     l.HostID,
+		LobbyCode:  l.Code,
+		HostID:     l.hostMemberID(),
 		Members:    l.memberSnapshots(),
 		MaxMembers: l.MaxMembers,
 		CreatedAt:  l.CreatedAt,
@@ -323,22 +328,22 @@ func (l *Lobby) Snapshot() LobbySnapshot {
 }
 
 func (l *Lobby) SnapshotFor(c *Client) *LobbySnapshot {
-	p := l.members[c.UserID]
+	m := l.members[c.UserID]
 
-	if p == nil {
+	if m == nil {
 		return nil
 	}
 
 	snapshot := l.Snapshot()
-	snapshot.Position = p.Position
+	snapshot.Position = m.Position
 
 	return &snapshot
 }
 
 func (l *Lobby) memberSnapshots() []Member {
 	var lobbyMembers []Member
-	for _, p := range l.members {
-		lobbyMembers = append(lobbyMembers, *p)
+	for _, m := range l.members {
+		lobbyMembers = append(lobbyMembers, *m)
 	}
 
 	return lobbyMembers
@@ -353,15 +358,15 @@ func (l *Lobby) broadcast(event Event, ignored ClientList) {
 	}
 }
 
-func (m *Manager) GenerateLobbyCode(length int) string {
+func (m *Manager) GenerateLobbyCode(length int) LobbyCode {
 	charset := strings.Split("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "")
 
-	var code string
+	var code LobbyCode
 
 	for ok := true; ok; _, ok = m.lobbies[code] {
 		code = ""
 		for range length {
-			code += charset[rand.IntN(len(charset))]
+			code += LobbyCode(charset[rand.IntN(len(charset))])
 		}
 	}
 
@@ -369,16 +374,24 @@ func (m *Manager) GenerateLobbyCode(length int) string {
 }
 
 func (l *Lobby) GenerateSessions() {
-	l.sessions = make(map[string]string)
+	l.sessions = make(map[SessionToken]UserID)
 
 	for _, member := range l.members {
 		session := Session{
-			LobbyCode:    l.LobbyCode,
-			SessionToken: uuid.NewString(),
+			LobbyCode:    l.Code,
+			SessionToken: SessionToken(uuid.NewString()),
 		}
 
 		member.session = session
-		l.sessions[session.SessionToken] = member.UserID
+		l.sessions[session.SessionToken] = member.userID
 	}
 
+}
+
+func (l *Lobby) hostMemberID() MemberID {
+	return l.members[l.hostUserID].MemberID
+}
+
+func (m *Member) PlayerID() game.PlayerID {
+	return game.PlayerID(m.MemberID)
 }

@@ -38,8 +38,8 @@ func (g *Game) DeckSize() int {
 
 // TODO: Overhaul this function to make it more logical, this and DistributeCards()
 // Draws specified number of cards into player's hand. Returns a boolean representing if any more cards can be drawn.
-func (g *Game) DrawCards(userID string, amount int) bool {
-	p := g.players[userID]
+func (g *Game) DrawCards(playerID PlayerID, amount int) bool {
+	p := g.players[playerID]
 
 	if p == nil {
 		// TODO: Some sort of error handling

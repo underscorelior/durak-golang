@@ -21,13 +21,13 @@ func (t *Turn) CanPlace(card Card) bool {
 	return exists
 }
 
-func (g *Game) CanTake(userID string) error {
+func (g *Game) CanTake(playerID PlayerID) error {
 	t := g.Turn
 
-	if userID != t.DefenderID {
+	if playerID != t.DefenderID {
 		return &Error{
 			Code:    "INVALID_ROLE",
-			Message: "This user is not the defender",
+			Message: "This player is not the defender",
 		}
 	}
 
@@ -41,13 +41,13 @@ func (g *Game) CanTake(userID string) error {
 	return nil
 }
 
-func (g *Game) CanPass(userID string) error {
+func (g *Game) CanPass(playerID PlayerID) error {
 	t := g.Turn
 
-	if slices.Contains(t.AttackerIDs, userID) {
+	if !slices.Contains(t.AttackerIDs, playerID) {
 		return &Error{
 			Code:    "INVALID_ROLE",
-			Message: "This user is not an attacker",
+			Message: "This player is not an attacker",
 		}
 	}
 
@@ -58,7 +58,7 @@ func (g *Game) CanPass(userID string) error {
 		}
 	}
 
-	if g.players[userID].Passed == true {
+	if g.players[playerID].Passed == true {
 		return &Error{
 			Code:    "ALREADY_PASSED",
 			Message: "Cannot pass turn while already passed",
@@ -68,13 +68,13 @@ func (g *Game) CanPass(userID string) error {
 	return nil
 }
 
-func (g *Game) CanDefend(userID string, card Card, cardPair CardPair) error {
+func (g *Game) CanDefend(playerID PlayerID, card Card, cardPair CardPair) error {
 	t := g.Turn
 
-	if userID != t.DefenderID {
+	if playerID != t.DefenderID {
 		return &Error{
 			Code:    "INVALID_ROLE",
-			Message: "This user is not the defender",
+			Message: "This player is not the defender",
 		}
 	}
 
@@ -102,17 +102,17 @@ func (g *Game) CanDefend(userID string, card Card, cardPair CardPair) error {
 	return nil
 }
 
-func (g *Game) CanAttack(userID string, card Card, pairIndex int) error {
+func (g *Game) CanAttack(playerID PlayerID, card Card, pairIndex int) error {
 	t := g.Turn
 
-	if t.Phase == TurnPhaseInitial && userID == t.InitialAttackerID {
+	if t.Phase == TurnPhaseInitial && playerID == t.InitialAttackerID {
 		return nil
 	}
 
-	if slices.Contains(t.AttackerIDs, userID) {
+	if !slices.Contains(t.AttackerIDs, playerID) {
 		return &Error{
 			Code:    "INVALID_ROLE",
-			Message: "This user is not an attacker",
+			Message: "This player is not an attacker",
 		}
 	}
 
@@ -147,7 +147,7 @@ func (g *Game) CanAttack(userID string, card Card, pairIndex int) error {
 	return nil
 }
 
-func (g *Game) ValidateParameters(userID string, pairIndex *int, card *Card) error {
+func (g *Game) ValidateParameters(playerID PlayerID, pairIndex *int, card *Card) error {
 	if pairIndex == nil {
 		return &Error{
 			Code:    "MISSING_ARGUMENT",
@@ -161,7 +161,7 @@ func (g *Game) ValidateParameters(userID string, pairIndex *int, card *Card) err
 		}
 	}
 
-	if !g.players[userID].CardInHand(*card) {
+	if !g.players[playerID].CardInHand(*card) {
 		return &Error{
 			Code:    "CARD_NOT_IN_HAND",
 			Message: "Selected card not in players hand",

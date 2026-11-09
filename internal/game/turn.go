@@ -2,11 +2,11 @@ package game
 
 type Turn struct {
 	TableState        []CardPair `json:"table_state"`
-	DefenderID        string     `json:"defender_id"`
-	InitialAttackerID string     `json:"initial_attacker_id"`
+	DefenderID        PlayerID   `json:"defender_id"`
+	InitialAttackerID PlayerID   `json:"initial_attacker_id"`
 
-	AttackerIDs []string  `json:"attacker_ids"`
-	Phase       TurnPhase `json:"phase"`
+	AttackerIDs []PlayerID `json:"attacker_ids"`
+	Phase       TurnPhase  `json:"phase"`
 }
 
 type TurnPhase int

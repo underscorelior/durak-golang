@@ -8,9 +8,10 @@ import (
 	"slices"
 )
 
+type PlayerID string
 type Game struct {
 	deck    []Card
-	players map[string]*Player
+	players map[PlayerID]*Player // PlayerID -> Player
 
 	Order TableOrder
 	Trump Card
@@ -29,8 +30,8 @@ func (e Error) Error() string {
 	return fmt.Sprintf("Code: %s, Message: %s", e.Code, e.Message)
 }
 
-func (g *Game) FindPlayerWithLowestTrumpCardInHand() string {
-	lowestID := ""
+func (g *Game) FindPlayerWithLowestTrumpCardInHand() PlayerID {
+	var lowestID PlayerID
 	lowestRank := Rank(math.MaxInt)
 
 	trump := g.Trump
@@ -57,7 +58,7 @@ func (g *Game) FindPlayerWithLowestTrumpCardInHand() string {
 	return slices.Collect(maps.Keys(g.players))[i]
 }
 
-func (g *Game) StartNextTurn(initialAttacker string) {
+func (g *Game) StartNextTurn(initialAttacker PlayerID) {
 	g.ResetPassingState()
 
 	defender := g.Order[initialAttacker].Next
@@ -80,12 +81,11 @@ func (g *Game) StartNextTurn(initialAttacker string) {
 }
 
 // Creates and shuffles the deck, deals cards and picks the Trump card
-// TODO: Fix the argument type
-func InitializeGame(players map[string]struct{ Position int }) *Game {
+func InitializeGame(players map[PlayerID]int) *Game {
 	var g Game
-	g.players = make(map[string]*Player, len(players))
+	g.players = make(map[PlayerID]*Player, len(players))
 	for k, v := range players {
-		g.players[k] = &Player{Position: v.Position}
+		g.players[k] = &Player{Position: v}
 	}
 
 	g.deck = CreateDeck()
@@ -106,20 +106,20 @@ func (g *Game) EndTurn(endPhase TurnPhase) {
 
 }
 
-func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *int) error {
+func (g *Game) MakeAction(playerID PlayerID, action Action, card *Card, pairIndex *int) error {
 	t := g.Turn
-	p := g.players[userID]
+	p := g.players[playerID]
 
 	if p == nil {
 		return &Error{
-			Code:    "INVALID_USER",
-			Message: "Provided user ID is not in the game",
+			Code:    "INVALID_PLAYER",
+			Message: "Provided player ID is not in the game",
 		}
 	}
 
 	// TAKE: Only DEFENDER during GAME phase
 	if action == ActionTake {
-		if err := g.CanTake(userID); err != nil {
+		if err := g.CanTake(playerID); err != nil {
 			return err
 		}
 
@@ -133,7 +133,7 @@ func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *i
 
 	// PASS: Only ATTACKERs during GAME phase, PASS BY DEFAULT ONCE CANNOT ADD NEW CARDS, PASSING CANCELLED ONCE A NEW CARD IS PLACED
 	if action == ActionPass {
-		if err := g.CanPass(userID); err != nil {
+		if err := g.CanPass(playerID); err != nil {
 			return err
 		}
 
@@ -145,7 +145,7 @@ func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *i
 		return nil
 	}
 
-	if err := g.ValidateParameters(userID, pairIndex, card); err != nil {
+	if err := g.ValidateParameters(playerID, pairIndex, card); err != nil {
 		return err
 	}
 
@@ -153,7 +153,7 @@ func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *i
 
 	// DEFENSE: Only the DEFENDER during GAME phase and CARD defends corresponding PAIR
 	if action == ActionDefend {
-		if err := g.CanDefend(userID, *card, cp); err != nil {
+		if err := g.CanDefend(playerID, *card, cp); err != nil {
 			return err
 		}
 
@@ -168,7 +168,7 @@ func (g *Game) MakeAction(userID string, action Action, card *Card, pairIndex *i
 
 	// ATTACK: EITHER phase is INITIAL and user is the initial attacker OR phase is GAME and user is an ATTACKER and CARD is within valid pool
 	if action == ActionAttack {
-		if err := g.CanAttack(userID, *card, *pairIndex); err != nil {
+		if err := g.CanAttack(playerID, *card, *pairIndex); err != nil {
 			return err
 		}
 

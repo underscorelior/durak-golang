@@ -36,7 +36,7 @@ func CreateLobby(event Event, c *Client) error {
 	c.manager.addLobby(lobby)
 
 	var lobbyCreatedPayload LobbyCreatedEvent
-	lobbyCreatedPayload.LobbyCode = lobby.LobbyCode
+	lobbyCreatedPayload.LobbyCode = lobby.Code
 
 	lobbyCreated, err := newEvent(EventLobbyCreated, lobbyCreatedPayload)
 	if err != nil {
@@ -54,7 +54,7 @@ func JoinLobby(event Event, c *Client) error {
 		return fmt.Errorf("(JoinLobby) Bad payload in request: %w", err)
 	}
 
-	if c.lobby != nil && joinLobbyEvent.LobbyCode == c.lobby.LobbyCode {
+	if c.lobby != nil && joinLobbyEvent.LobbyCode == c.lobby.Code {
 		return &ClientError{
 			Code:    "ALREADY_IN_LOBBY",
 			Message: "Cannot join a lobby you are already a part of",
@@ -106,20 +106,21 @@ func JoinLobby(event Event, c *Client) error {
 
 	c.lobby = lobby
 
-	p := &Member{
-		UserID:      c.UserID,
+	m := &Member{
+		userID:      c.UserID,
+		MemberID:    MemberID(shortID()),
 		Name:        c.Name,
 		Position:    pos,
 		JoinedAt:    time.Now(),
 		IsConnected: true,
 	}
 
-	lobby.addClient(c, p)
+	lobby.addClient(c, m)
 
 	var lobbyJoinedPayload LobbyJoinedEvent
 	snapshot := lobby.SnapshotFor(c)
 	if snapshot == nil {
-		return fmt.Errorf("(JoinLobby) No snapshot for user %s in lobby %s", c.UserID, lobby.LobbyCode)
+		return fmt.Errorf("(JoinLobby) No snapshot for user %s in lobby %s", c.UserID, lobby.Code)
 	}
 
 	lobbyJoinedPayload.Lobby = *snapshot
@@ -132,7 +133,7 @@ func JoinLobby(event Event, c *Client) error {
 	c.egress <- lobbyJoined
 
 	var memberJoinedPayload MemberJoinedEvent
-	memberJoinedPayload.Member = *p
+	memberJoinedPayload.Member = *m
 
 	memberJoined, err := newEvent(EventMemberJoined, memberJoinedPayload)
 	if err != nil {
@@ -186,10 +187,10 @@ func StartGame(event Event, c *Client) error {
 
 	}
 
-	if c.UserID != l.HostID {
+	if c.UserID != l.hostUserID {
 		return &ClientError{
 			Code:    "MEMBER_NOT_HOST",
-			Message: fmt.Sprintf("User (%v) is not lobby host (%v)", c.UserID[:6], l.HostID[:6]),
+			Message: fmt.Sprintf("Member (%v) is not lobby host (%v)", l.members[c.UserID].MemberID, l.hostMemberID()),
 		}
 	}
 
@@ -207,13 +208,13 @@ func StartGame(event Event, c *Client) error {
 		}
 	}
 
-	gameMembers := make(map[string]struct{ Position int })
+	seats := make(map[game.PlayerID]int)
 
-	for k, v := range l.members { // TODO: Fix this BS
-		gameMembers[k] = struct{ Position int }{Position: v.Position}
+	for _, v := range l.members {
+		seats[v.PlayerID()] = v.Position
 	}
 
-	l.game = game.InitializeGame(gameMembers)
+	l.game = game.InitializeGame(seats)
 	l.InGame = true
 
 	snapshot := l.Snapshot()
@@ -221,19 +222,19 @@ func StartGame(event Event, c *Client) error {
 	l.GenerateSessions()
 
 	for _, cl := range l.clients {
-		p := l.members[cl.UserID]
+		m := l.members[cl.UserID]
 
 		lobbySnapshot := snapshot
-		lobbySnapshot.Position = p.Position
+		lobbySnapshot.Position = m.Position
 
-		gameState := l.game.SnapshotFor(cl.UserID)
+		gameState := l.game.SnapshotFor(m.PlayerID())
 		if gameState == nil {
-			return fmt.Errorf("(StartGame) No snapshot for user %s in lobby %s", cl.UserID, l.LobbyCode)
+			return fmt.Errorf("(StartGame) No snapshot for user %s in lobby %s", cl.UserID, l.Code)
 		}
 
 		var gameStartedPayload GameStartedEvent
 		gameStartedPayload.Lobby = lobbySnapshot
-		gameStartedPayload.Session = l.members[cl.UserID].session
+		gameStartedPayload.Session = m.session
 		gameStartedPayload.GameState = *gameState // TODO: for gameStarted, I dont think we want to provide the turn state
 
 		gameStarted, err := newEvent(EventGameStarted, gameStartedPayload)
@@ -254,7 +255,7 @@ func RejoinLobby(event Event, c *Client) error {
 		return fmt.Errorf("(RejoinLobby) Bad payload in request: %v", err)
 	}
 
-	if c.lobby != nil && rejoinLobbyEvent.LobbyCode == c.lobby.LobbyCode {
+	if c.lobby != nil && rejoinLobbyEvent.LobbyCode == c.lobby.Code {
 		return nil // How else should I handle this?
 	}
 
@@ -280,25 +281,25 @@ func RejoinLobby(event Event, c *Client) error {
 	if userID != c.UserID {
 		return &ClientError{
 			Code:    "INCORRECT_USER_ID",
-			Message: fmt.Sprintf("Your user ID does not match : %v", rejoinLobbyEvent.LobbyCode),
+			Message: "This session does not beling to you.",
 		}
 	}
 
-	p := lobby.members[c.UserID]
+	m := lobby.members[c.UserID]
 
-	if p == nil {
+	if m == nil {
 		return errors.New("(RejoinLobby) Failed to locate member")
 	}
 
 	c.lobby = lobby
-	p.IsConnected = true
+	m.IsConnected = true
 
-	lobby.addClient(c, p)
+	lobby.addClient(c, m)
 
 	var lobbyRejoinedPayload LobbyRejoinedEvent
 	snapshot := lobby.SnapshotFor(c)
 	if snapshot == nil {
-		return fmt.Errorf("(RejoinLobby) No snapshot for user %s in lobby %s", c.UserID, lobby.LobbyCode)
+		return fmt.Errorf("(RejoinLobby) No snapshot for user %s in lobby %s", c.UserID, lobby.Code)
 	}
 
 	lobbyRejoinedPayload.Lobby = *snapshot
@@ -311,7 +312,7 @@ func RejoinLobby(event Event, c *Client) error {
 	c.egress <- lobbyRejoined
 
 	var memberRejoinedPayload MemberRejoinedEvent
-	memberRejoinedPayload.UserID = c.UserID
+	memberRejoinedPayload.MemberID = m.MemberID
 
 	memberRejoined, err := newEvent(EventMemberRejoined, memberRejoinedPayload)
 	if err != nil {
@@ -327,11 +328,12 @@ func RejoinLobby(event Event, c *Client) error {
 }
 
 func MakeAction(event Event, c *Client) error {
-	if c.lobby == nil {
+	l := c.lobby
+	if l == nil {
 		return errors.New("(MakeAction) Cant make action when not in lobby")
 	}
 
-	if c.lobby.game == nil {
+	if l.game == nil {
 		return errors.New("(MakeAction) Cant make an action when there is no active game")
 	}
 
@@ -341,17 +343,19 @@ func MakeAction(event Event, c *Client) error {
 		return fmt.Errorf("(MakeAction) Bad payload in request: %w", err)
 	}
 
-	if gmErr := c.lobby.game.MakeAction(c.UserID, makeAction.Action, makeAction.Card, makeAction.PairIndex); gmErr != nil {
+	m := l.members[c.UserID]
+
+	if gmErr := l.game.MakeAction(m.PlayerID(), makeAction.Action, makeAction.Card, makeAction.PairIndex); gmErr != nil {
 		return gmErr
 	}
 
 	var actionMadePayload ActionMadeEvent
 	actionMadePayload = ActionMadeEvent{
-		UserID:    c.UserID,
+		MemberID:  m.MemberID,
 		Action:    makeAction.Action,
 		Card:      makeAction.Card,
 		PairIndex: makeAction.PairIndex,
-		Phase:     &c.lobby.game.Turn.Phase,
+		Phase:     &l.game.Turn.Phase,
 	}
 
 	actionMade, err := newEvent(EventActionMade, actionMadePayload)
@@ -359,7 +363,7 @@ func MakeAction(event Event, c *Client) error {
 		return err
 	}
 
-	c.lobby.broadcast(actionMade, ClientList{})
+	l.broadcast(actionMade, ClientList{})
 
 	return nil
 }

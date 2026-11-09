@@ -22,11 +22,10 @@ func (e *ClientError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Code, e.Message)
 }
 
-type ClientList map[string]*Client // UserID -> Client
-
+type UserID string
 type Client struct {
 	Name   string
-	UserID string
+	UserID UserID
 
 	connection *websocket.Conn
 	lobby      *Lobby
@@ -34,11 +33,12 @@ type Client struct {
 
 	egress chan Event
 }
+type ClientList map[UserID]*Client // UserID -> Client
 
 func NewClient(conn *websocket.Conn, manager *Manager, name string) *Client {
 	return &Client{
 		Name:       name,
-		UserID:     uuid.NewString(),
+		UserID:     UserID(uuid.NewString()),
 		connection: conn,
 		manager:    manager,
 		egress:     make(chan Event),

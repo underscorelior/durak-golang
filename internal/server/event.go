@@ -34,6 +34,7 @@ const (
 	EventMemberRejoined        = "member_rejoined"
 	EventStartGame             = "start_game"
 	EventGameStarted           = "game_started"
+	EventNewTurn               = "new_turn"
 	EventMakeAction            = "make_action"
 	EventActionMade            = "action_made"
 	EventTurnPassed            = "turn_passed"
@@ -41,7 +42,7 @@ const (
 )
 
 type ConnectionEstablishedEvent struct {
-	UserID  string         `json:"user_id"`
+	UserID  UserID         `json:"user_id"`
 	Name    string         `json:"name"`
 	Lobbies []LobbyPreview `json:"lobbies"`
 
@@ -62,12 +63,12 @@ type UserUpdatedEvent struct {
 }
 
 type LobbyCreatedEvent struct {
-	LobbyCode string `json:"lobby_code"`
+	LobbyCode LobbyCode `json:"lobby_code"`
 }
 
 // Sent by a client to the server to indicate joining.
 type JoinLobbyEvent struct {
-	LobbyCode string `json:"lobby_code"`
+	LobbyCode LobbyCode `json:"lobby_code"`
 }
 
 // Sent by server to recently joined client
@@ -84,19 +85,19 @@ type LobbyLeftEvent struct {
 }
 
 type MemberLeftEvent struct {
-	UserID   string `json:"user_id"`
-	HostID   string `json:"host_id"`
-	Position int    `json:"position"`
+	MemberID MemberID `json:"member_id"`
+	HostID   MemberID `json:"host_id"`
+	Position int      `json:"position"`
 }
 
 type MemberDisconnectedEvent struct {
-	UserID         string    `json:"user_id"`
+	MemberID       MemberID  `json:"member_id"`
 	DisconnectedAt time.Time `json:"disconnected_at"`
 }
 
 type RejoinLobbyEvent struct {
-	LobbyCode    string `json:"lobby_code"`
-	SessionToken string `json:"session_token"`
+	LobbyCode    LobbyCode    `json:"lobby_code"`
+	SessionToken SessionToken `json:"session_token"`
 }
 
 type LobbyRejoinedEvent struct {
@@ -105,12 +106,16 @@ type LobbyRejoinedEvent struct {
 }
 
 type MemberRejoinedEvent struct {
-	UserID string `json:"user_id"`
+	MemberID MemberID `json:"member_id"`
 }
 
 type GameStartedEvent struct {
 	Lobby     LobbySnapshot `json:"lobby"`
 	Session   Session       `json:"session"`
+	GameState game.Snapshot `json:"game_state"`
+}
+
+type NewTurnEvent struct {
 	GameState game.Snapshot `json:"game_state"`
 }
 
@@ -121,7 +126,7 @@ type MakeActionEvent struct {
 }
 
 type ActionMadeEvent struct {
-	UserID    string          `json:"user_id"`
+	MemberID  MemberID        `json:"member_id"`
 	Action    game.Action     `json:"action"`
 	Card      *game.Card      `json:"card,omitempty"`
 	PairIndex *int            `json:"pair_index,omitempty"`
@@ -132,7 +137,9 @@ type CardsTakenEvent struct {
 	TossInTimeout time.Time `json:"toss_in_timeout"`
 }
 
-type TurnsPassedEvent struct {
+type TurnPassedEvent struct {
+	DrawCounts map[MemberID]int `json:"draw_counts"` // Number of cards drawn by MemberID
+	CardsDrawn []game.Card      `json:"cards_drawn"`
 }
 
 type ErrorEvent struct {

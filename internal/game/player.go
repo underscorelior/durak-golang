@@ -13,10 +13,10 @@ type Player struct {
 }
 
 type PlayerView struct {
-	UserID   string `json:"user_id"`
-	HandSize int    `json:"hand_size"`
-	Position int    `json:"position"`
-	Passed   bool   `json:"passed"`
+	PlayerID PlayerID `json:"player_id"`
+	HandSize int      `json:"hand_size"`
+	Position int      `json:"position"`
+	Passed   bool     `json:"passed"`
 }
 
 type Snapshot struct {
@@ -30,9 +30,9 @@ type Snapshot struct {
 
 func (g *Game) playerSnapshots() []PlayerView {
 	var playerSnapshots []PlayerView
-	for userID, player := range g.players {
+	for playerID, player := range g.players {
 		playerSnapshot := PlayerView{
-			UserID:   userID,
+			PlayerID: playerID,
 			HandSize: len(player.hand),
 			Position: player.Position,
 			Passed:   player.Passed,
@@ -43,16 +43,14 @@ func (g *Game) playerSnapshots() []PlayerView {
 	return playerSnapshots
 }
 
-func (g *Game) SnapshotFor(userID string) *Snapshot { // TODO: Two versions of snapshot, lobby and game. need to fix naming.
-	_, ok := g.players[userID]
-
-	if !ok {
+func (g *Game) SnapshotFor(playerID PlayerID) *Snapshot { // TODO: Two versions of snapshot, lobby and game. need to fix naming.
+	if _, ok := g.players[playerID]; !ok {
 		return nil
 	}
 
 	return &Snapshot{
 		Players:      g.playerSnapshots(),
-		Hand:         g.players[userID].hand,
+		Hand:         g.players[playerID].hand,
 		Trump:        g.Trump,
 		DeckSize:     g.DeckSize(),
 		Turn:         g.Turn,
@@ -79,12 +77,12 @@ func (p *Player) CardInHand(card Card) bool {
 }
 
 type PlayerOrder struct {
-	Next     string
-	Previous string
+	Next     PlayerID
+	Previous PlayerID
 }
-type TableOrder map[string]PlayerOrder
+type TableOrder map[PlayerID]PlayerOrder
 
-func (g *Game) PlayerAtPosition(pos int) string {
+func (g *Game) PlayerAtPosition(pos int) PlayerID {
 	for id, player := range g.players {
 		if player.Position == pos {
 			return id
@@ -102,7 +100,7 @@ func (g *Game) SetupTableOrder() {
 
 	keys := slices.Collect(maps.Keys(players))
 
-	slices.SortFunc(keys, func(i, j string) int {
+	slices.SortFunc(keys, func(i, j PlayerID) int {
 		return cmp.Compare(players[i].Position, players[j].Position)
 	})
 
@@ -117,9 +115,9 @@ func (g *Game) SetupTableOrder() {
 	g.Order = tableOrder
 }
 
-func (g *Game) AdjacentTo(userID string) []string {
-	o := g.Order[userID]
-	return []string{o.Next, o.Previous}
+func (g *Game) AdjacentTo(playerID PlayerID) []PlayerID {
+	o := g.Order[playerID]
+	return []PlayerID{o.Next, o.Previous}
 }
 
 func calcPosOffset(pos, offset, num int) int {
